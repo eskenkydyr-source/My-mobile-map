@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+.env
+*.egg-info/
+.pytest_cache/
+htmlcov/
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Android build outputs
+frontend/android/app/build/
+frontend/android/.gradle/
+frontend/android/build/
+*.apk
+
+# IDE
+.idea/
+.vscode/
+*.swp
