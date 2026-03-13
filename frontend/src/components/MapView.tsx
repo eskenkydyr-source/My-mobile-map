@@ -118,26 +118,25 @@ export default function MapView() {
   const base = import.meta.env.BASE_URL
 
   useEffect(() => {
-    Promise.all([
-      fetch(`${base}data/wells.geojson`).then(r => r.json()),
-      fetch(`${base}data/bkns.geojson`).then(r => r.json()),
-      fetch(`${base}data/gu.geojson`).then(r => r.json()),
-      fetch(`${base}data/graph.json`).then(r => r.json()),
-    ]).then(([w, b, g, gr]) => {
-      setWells(w); setBkns(b); setGu(g)
-      const parsed = {
-        nodes: gr.nodes.map((n: any) => Array.isArray(n) ? { lat: n[0], lon: n[1], type: n[2] || "road" } : n) as GraphNode[],
-        edges: gr.edges as [number,number,number][]
-      }
-      // Загрузить сохранённые изменения из localStorage
-      const saved = localStorage.getItem('kalamkas_graph')
-      const graph = saved ? JSON.parse(saved) : parsed
-      setGraphData(parsed)
-      setEditGraph({ ...graph })
-      ;(window as any).__KALAMKAS_GRAPH = graph
-      // Глобально для RoutePanel поиска
-      ;(window as any).__KALAMKAS_DATA = { wells: w, bkns: b, gu: g }
-    })
+    import('../utils/dataLoader').then(({ loadAllData }) =>
+      loadAllData(base).then(({ wells: w, bkns: b, gu: g, graph: gr, source }) => {
+        setWells(w); setBkns(b); setGu(g)
+        const parsed = {
+          nodes: gr.nodes.map((n: any) => Array.isArray(n) ? { lat: n[0], lon: n[1], type: n[2] || "road" } : n) as GraphNode[],
+          edges: gr.edges as [number,number,number][]
+        }
+        // Загрузить сохранённые изменения из localStorage
+        const saved = localStorage.getItem('kalamkas_graph')
+        const graph = saved ? JSON.parse(saved) : parsed
+        setGraphData(parsed)
+        setEditGraph({ ...graph })
+        ;(window as any).__KALAMKAS_GRAPH = graph
+        // Глобально для RoutePanel поиска
+        ;(window as any).__KALAMKAS_DATA = { wells: w, bkns: b, gu: g }
+        ;(window as any).__DATA_SOURCE = source
+        console.log(`[Kalamkas] Данные загружены: ${source}`)
+      })
+    )
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Построение маршрута — использует editGraph (с изменениями) если он есть
