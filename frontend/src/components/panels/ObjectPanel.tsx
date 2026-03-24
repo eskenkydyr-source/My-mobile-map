@@ -4,6 +4,7 @@ import { useStore } from '../../store/useStore'
 export default function ObjectPanel() {
   const { selectedObject, setFrom, setTo, setActiveTab } = useStore()
   const [routing, setRouting] = useState(false)
+  const [locError, setLocError] = useState('')
 
   if (!selectedObject) {
     return (
@@ -35,6 +36,7 @@ export default function ObjectPanel() {
 
   const routeFromMe = () => {
     setRouting(true)
+    setLocError('')
 
     const tryGPS = () => {
       if (!navigator.geolocation) { tryIP(); return }
@@ -70,7 +72,8 @@ export default function ObjectPanel() {
         try { const { lat, lon } = await service(); applyMyLocation(lat, lon); return } catch {}
       }
       setRouting(false)
-      alert('Не удалось определить местоположение')
+      setLocError('Не удалось определить местоположение. Проверьте интернет.')
+      setTimeout(() => setLocError(''), 4000)
     }
 
     tryGPS()
@@ -78,20 +81,20 @@ export default function ObjectPanel() {
 
   return (
     <div style={{ padding: 12 }}>
-      <div style={{ fontSize: 15, fontWeight: 700, color: '#38bdf8', marginBottom: 8 }}>
+      <div style={{ fontSize: 15, fontWeight: 700, color: '#38bdf8', marginBottom: 6 }}>
         {name}
       </div>
-      <div style={{ fontSize: 11, color: '#475569', marginBottom: 12 }}>
+      <div style={{ fontSize: 12, color: '#475569', marginBottom: 12 }}>
         {type === 'well' ? 'Скважина' : type === 'bkns' ? 'БКНС' : 'ГУ'} •{' '}
         {lat.toFixed(5)}, {lon.toFixed(5)}
       </div>
 
       {/* Свойства */}
-      <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 12 }}>
+      <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 14 }}>
         {Object.entries(properties || {})
           .filter(([k, v]) => v && !['id', 'layer_type', 'OBJECTID', 'OBJECTID_1', 'Shape_Leng', 'Shape_Area', 'PERIMETER', 'GU_', 'GU_ID'].includes(k))
           .map(([k, v]) => (
-            <div key={k} style={{ display: 'flex', gap: 6, marginBottom: 3 }}>
+            <div key={k} style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
               <span style={{ color: '#475569' }}>{k}:</span>
               <span>{String(v)}</span>
             </div>
@@ -99,30 +102,43 @@ export default function ObjectPanel() {
         }
       </div>
 
+      {/* Ошибка геолокации */}
+      {locError && (
+        <div style={{
+          background: '#450a0a', border: '1px solid #7f1d1d',
+          borderRadius: 6, padding: '8px 10px',
+          fontSize: 12, color: '#fca5a5', marginBottom: 10
+        }}>
+          ❌ {locError}
+        </div>
+      )}
+
       {/* Маршрут от меня */}
       <button
         onClick={routeFromMe}
         disabled={routing}
         style={{
-          width: '100%', padding: '9px', fontSize: 13, fontWeight: 600,
-          marginBottom: 8,
+          width: '100%', padding: '12px', fontSize: 14, fontWeight: 600,
+          minHeight: 48, marginBottom: 10,
           background: routing ? '#1e3a5f' : '#1d4ed8',
           color: '#fff', border: 'none', borderRadius: 6,
           cursor: routing ? 'wait' : 'pointer',
-          boxShadow: '0 2px 6px rgba(29,78,216,0.4)'
+          boxShadow: '0 2px 6px rgba(29,78,216,0.4)',
+          touchAction: 'manipulation',
         }}
       >
         {routing ? '⏳ Определяю местоположение...' : '🎯 Маршрут от меня сюда'}
       </button>
 
       {/* Кнопки откуда/куда */}
-      <div style={{ display: 'flex', gap: 6 }}>
+      <div style={{ display: 'flex', gap: 8 }}>
         <button
           onClick={() => setAsRoute('from')}
           style={{
-            flex: 1, padding: '7px', fontSize: 12,
+            flex: 1, padding: '12px', fontSize: 13, minHeight: 48,
             background: '#1e293b', color: '#22c55e',
-            border: '1px solid #22c55e', borderRadius: 6, cursor: 'pointer'
+            border: '1px solid #22c55e', borderRadius: 6, cursor: 'pointer',
+            touchAction: 'manipulation',
           }}
         >
           📍 Откуда
@@ -130,9 +146,10 @@ export default function ObjectPanel() {
         <button
           onClick={() => setAsRoute('to')}
           style={{
-            flex: 1, padding: '7px', fontSize: 12,
+            flex: 1, padding: '12px', fontSize: 13, minHeight: 48,
             background: '#1e293b', color: '#ef4444',
-            border: '1px solid #ef4444', borderRadius: 6, cursor: 'pointer'
+            border: '1px solid #ef4444', borderRadius: 6, cursor: 'pointer',
+            touchAction: 'manipulation',
           }}
         >
           🏁 Куда

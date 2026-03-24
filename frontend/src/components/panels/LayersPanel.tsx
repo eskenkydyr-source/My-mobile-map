@@ -19,36 +19,43 @@ const SEGMENT_STEPS = [
   { value: 500, label: '500 м' },
 ]
 
+// Стиль кнопки — минимум 44px для мобильного
+const btnStyle = (active: boolean, colors: { active: string; border: string }): React.CSSProperties => ({
+  padding: '10px 4px', fontSize: 12, minHeight: 44,
+  background: active ? colors.active : '#1e293b',
+  color: active ? '#fff' : '#94a3b8',
+  border: '1px solid ' + (active ? colors.border : '#334155'),
+  borderRadius: 6, cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+  touchAction: 'manipulation' as const,
+})
+
 function EditorTools() {
   const { editSubmode, setEditSubmode, selectedNodeIdx, segmentStep, setSegmentStep } = useStore()
 
   const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'ok' | 'err'>('idle')
+  const [saveError, setSaveError] = useState('')
+
+  // Инлайн форма для токена (вместо prompt)
+  const [showTokenInput, setShowTokenInput] = useState(false)
+  const [tokenInput, setTokenInput] = useState('')
+
+  // Инлайн подтверждение сброса (вместо confirm)
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
 
   const GITHUB_REPO = 'eskenkydyr-source/kalamkas-app'
   const GITHUB_FILE = 'data/graph.json'
   const GITHUB_BRANCH = 'gh-pages'
 
-  const saveToCloud = async () => {
+  const doSave = async (token: string) => {
     const data = (window as any).__KALAMKAS_GRAPH
-    if (!data) return alert('Граф не загружен')
-
-    // Получить или запросить токен
-    let token = localStorage.getItem('gh_token')
-    if (!token) {
-      token = prompt(
-        'Введите GitHub Personal Access Token (нужен для сохранения на все устройства).\n\n' +
-        'Получить: github.com → Settings → Developer settings → Personal access tokens → Fine-grained → Contents: Read & Write\n\n' +
-        'Токен сохранится в браузере и больше не понадобится.'
-      )
-      if (!token) return
-      localStorage.setItem('gh_token', token)
-    }
+    if (!data) { setSaveError('Граф не загружен'); return }
 
     setSaving(true)
     setSaveStatus('idle')
+    setSaveError('')
     try {
-      // Получить текущий SHA файла
       const headRes = await fetch(
         `https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}?ref=${GITHUB_BRANCH}`,
         { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github+json' } }
@@ -56,10 +63,8 @@ function EditorTools() {
       if (!headRes.ok) throw new Error(`GitHub API: ${headRes.status}`)
       const { sha } = await headRes.json()
 
-      // Кодировать в base64
       const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))))
 
-      // Обновить файл
       const putRes = await fetch(
         `https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`,
         {
@@ -67,44 +72,55 @@ function EditorTools() {
           headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
           body: JSON.stringify({
             message: `graph: save changes ${new Date().toISOString().slice(0,16)}`,
-            content, sha,
-            branch: GITHUB_BRANCH
+            content, sha, branch: GITHUB_BRANCH
           })
         }
       )
       if (!putRes.ok) {
         const err = await putRes.json()
-        if (putRes.status === 401) { localStorage.removeItem('gh_token'); throw new Error('Неверный токен, попробуй снова') }
+        if (putRes.status === 401) { localStorage.removeItem('gh_token'); throw new Error('Неверный токен') }
         throw new Error(err.message || putRes.status)
       }
       setSaveStatus('ok')
       setTimeout(() => setSaveStatus('idle'), 3000)
     } catch (e: any) {
-      alert('Ошибка сохранения: ' + e.message)
+      setSaveError('Ошибка: ' + e.message)
       setSaveStatus('err')
     } finally {
       setSaving(false)
     }
   }
 
+  const saveToCloud = () => {
+    const data = (window as any).__KALAMKAS_GRAPH
+    if (!data) { setSaveError('Граф не загружен'); return }
+
+    const token = localStorage.getItem('gh_token')
+    if (!token) {
+      setShowTokenInput(true)
+      return
+    }
+    doSave(token)
+  }
+
+  const handleTokenSubmit = () => {
+    if (!tokenInput.trim()) return
+    localStorage.setItem('gh_token', tokenInput.trim())
+    setShowTokenInput(false)
+    doSave(tokenInput.trim())
+    setTokenInput('')
+  }
+
   const exportGraph = () => {
     const data = (window as any).__KALAMKAS_GRAPH
-    if (!data) return alert('Граф не загружен')
-    const json = JSON.stringify(data, null, 2)
-    const blob = new Blob([json], { type: 'application/json' })
+    if (!data) { setSaveError('Граф не загружен'); return }
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
     a.download = `graph_${new Date().toISOString().slice(0,10)}.json`
     a.click()
     URL.revokeObjectURL(url)
-  }
-
-  const resetGraph = () => {
-    if (confirm('Сбросить все изменения графа?')) {
-      localStorage.removeItem('kalamkas_graph')
-      window.location.reload()
-    }
   }
 
   const activeHint = SUBMODES.find(s => s.key === editSubmode)?.hint
@@ -122,14 +138,7 @@ function EditorTools() {
             key={s.key}
             onClick={() => setEditSubmode(s.key)}
             title={s.hint}
-            style={{
-              padding: '7px 4px', fontSize: 11,
-              background: editSubmode === s.key ? '#4f46e5' : '#1e293b',
-              color: editSubmode === s.key ? '#fff' : '#94a3b8',
-              border: '1px solid ' + (editSubmode === s.key ? '#6366f1' : '#334155'),
-              borderRadius: 6, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4
-            }}
+            style={btnStyle(editSubmode === s.key, { active: '#4f46e5', border: '#6366f1' })}
           >
             <span>{s.icon}</span>
             <span>{s.label}</span>
@@ -137,7 +146,6 @@ function EditorTools() {
         ))}
       </div>
 
-      {/* Подсказка */}
       {activeHint && (
         <div style={{
           background: '#1e293b', border: '1px solid #334155',
@@ -148,21 +156,20 @@ function EditorTools() {
         </div>
       )}
 
-      {/* Режим "Цепочка": кнопка завершения */}
       {editSubmode === 'chain' && (
         <button
-          onClick={() => setEditSubmode('chain')} // переключение сбрасывает chainLastIdx через useEffect в MapView
+          onClick={() => setEditSubmode('chain')}
           style={{
-            padding: '6px 8px', fontSize: 11, fontWeight: 600,
+            padding: '10px 8px', fontSize: 12, fontWeight: 600, minHeight: 44,
             background: '#7c2d12', color: '#fdba74',
-            border: '1px solid #9a3412', borderRadius: 6, cursor: 'pointer'
+            border: '1px solid #9a3412', borderRadius: 6, cursor: 'pointer',
+            touchAction: 'manipulation',
           }}
         >
           ⏹ Начать новую цепочку
         </button>
       )}
 
-      {/* Режим "Отрезок": выбор шага */}
       {editSubmode === 'segment' && (
         <div>
           <div style={{ fontSize: 10, color: '#475569', marginBottom: 4 }}>Шаг между узлами:</div>
@@ -171,13 +178,7 @@ function EditorTools() {
               <button
                 key={s.value}
                 onClick={() => setSegmentStep(s.value)}
-                style={{
-                  flex: 1, padding: '5px 2px', fontSize: 10,
-                  background: segmentStep === s.value ? '#0369a1' : '#1e293b',
-                  color: segmentStep === s.value ? '#fff' : '#94a3b8',
-                  border: '1px solid ' + (segmentStep === s.value ? '#0ea5e9' : '#334155'),
-                  borderRadius: 4, cursor: 'pointer'
-                }}
+                style={btnStyle(segmentStep === s.value, { active: '#0369a1', border: '#0ea5e9' })}
               >
                 {s.label}
               </button>
@@ -186,7 +187,6 @@ function EditorTools() {
         </div>
       )}
 
-      {/* Статус выбранного узла */}
       {needsNodeSelect && (
         <div style={{
           background: selectedNodeIdx !== null ? '#14532d' : '#1c1917',
@@ -202,43 +202,136 @@ function EditorTools() {
         </div>
       )}
 
-      {/* Сохранить в облако */}
+      {/* Форма ввода токена (вместо prompt) */}
+      {showTokenInput && (
+        <div style={{
+          background: '#1e293b', border: '1px solid #334155',
+          borderRadius: 8, padding: 12,
+          display: 'flex', flexDirection: 'column', gap: 8
+        }}>
+          <div style={{ fontSize: 12, color: '#94a3b8' }}>
+            Введите GitHub Personal Access Token:
+          </div>
+          <div style={{ fontSize: 10, color: '#475569' }}>
+            github.com → Settings → Developer settings → Fine-grained tokens → Contents: Read & Write
+          </div>
+          <input
+            type="password"
+            value={tokenInput}
+            onChange={e => setTokenInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleTokenSubmit()}
+            placeholder="github_pat_..."
+            autoFocus
+            style={{
+              padding: '10px 8px', fontSize: 14,
+              background: '#0f172a', color: '#e2e8f0',
+              border: '1px solid #334155', borderRadius: 6, outline: 'none',
+            }}
+          />
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button
+              onClick={handleTokenSubmit}
+              style={{
+                flex: 1, padding: '10px', fontSize: 13, fontWeight: 600, minHeight: 44,
+                background: '#1d4ed8', color: '#fff',
+                border: 'none', borderRadius: 6, cursor: 'pointer',
+                touchAction: 'manipulation',
+              }}
+            >
+              Сохранить
+            </button>
+            <button
+              onClick={() => { setShowTokenInput(false); setTokenInput('') }}
+              style={{
+                padding: '10px 14px', fontSize: 13, minHeight: 44,
+                background: '#1e293b', color: '#94a3b8',
+                border: '1px solid #334155', borderRadius: 6, cursor: 'pointer',
+                touchAction: 'manipulation',
+              }}
+            >
+              Отмена
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Сообщение об ошибке */}
+      {saveError && (
+        <div style={{
+          background: '#450a0a', border: '1px solid #7f1d1d',
+          borderRadius: 6, padding: '8px 10px', fontSize: 12, color: '#fca5a5'
+        }}>
+          ❌ {saveError}
+        </div>
+      )}
+
       <button
         onClick={saveToCloud}
         disabled={saving}
         style={{
-          width: '100%', padding: '8px', fontSize: 12, fontWeight: 600,
+          width: '100%', padding: '10px', fontSize: 12, fontWeight: 600, minHeight: 44,
           background: saveStatus === 'ok' ? '#14532d' : saving ? '#1e3a5f' : '#1d4ed8',
           color: saveStatus === 'ok' ? '#86efac' : '#fff',
           border: '1px solid ' + (saveStatus === 'ok' ? '#166534' : '#2563eb'),
           borderRadius: 6, cursor: saving ? 'wait' : 'pointer',
-          transition: 'all 0.2s'
+          transition: 'all 0.2s', touchAction: 'manipulation',
         }}
       >
-        {saving ? '⏳ Сохраняю...' : saveStatus === 'ok' ? '✅ Сохранено на всех устройствах' : '☁️ Сохранить на все устройства'}
+        {saving ? '⏳ Сохраняю...' : saveStatus === 'ok' ? '✅ Сохранено' : '☁️ Сохранить на все устройства'}
       </button>
 
       <div style={{ display: 'flex', gap: 4 }}>
         <button
           onClick={exportGraph}
           style={{
-            flex: 1, padding: '6px', fontSize: 11,
+            flex: 1, padding: '10px', fontSize: 12, minHeight: 44,
             background: '#064e3b', color: '#6ee7b7',
-            border: '1px solid #065f46', borderRadius: 6, cursor: 'pointer'
+            border: '1px solid #065f46', borderRadius: 6, cursor: 'pointer',
+            touchAction: 'manipulation',
           }}
         >
           💾 Экспорт JSON
         </button>
-        <button
-          onClick={resetGraph}
-          style={{
-            flex: 1, padding: '6px', fontSize: 11,
-            background: '#450a0a', color: '#fca5a5',
-            border: '1px solid #7f1d1d', borderRadius: 6, cursor: 'pointer'
-          }}
-        >
-          🔄 Сбросить
-        </button>
+
+        {/* Кнопка сброса */}
+        {!showResetConfirm ? (
+          <button
+            onClick={() => setShowResetConfirm(true)}
+            style={{
+              flex: 1, padding: '10px', fontSize: 12, minHeight: 44,
+              background: '#450a0a', color: '#fca5a5',
+              border: '1px solid #7f1d1d', borderRadius: 6, cursor: 'pointer',
+              touchAction: 'manipulation',
+            }}
+          >
+            🔄 Сбросить
+          </button>
+        ) : (
+          <div style={{ flex: 1, display: 'flex', gap: 4 }}>
+            <button
+              onClick={() => { localStorage.removeItem('kalamkas_graph'); window.location.reload() }}
+              style={{
+                flex: 1, padding: '10px', fontSize: 12, minHeight: 44,
+                background: '#dc2626', color: '#fff',
+                border: '1px solid #ef4444', borderRadius: 6, cursor: 'pointer',
+                touchAction: 'manipulation',
+              }}
+            >
+              ✓ Да
+            </button>
+            <button
+              onClick={() => setShowResetConfirm(false)}
+              style={{
+                flex: 1, padding: '10px', fontSize: 12, minHeight: 44,
+                background: '#1e293b', color: '#94a3b8',
+                border: '1px solid #334155', borderRadius: 6, cursor: 'pointer',
+                touchAction: 'manipulation',
+              }}
+            >
+              ✕ Нет
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -255,21 +348,37 @@ const WELL_TYPES: { key: WellType; label: string; color: string; count: number }
 ]
 
 const BASE_LAYERS = [
-  { key: 'osm' as const,  label: '🗺 Карта' },
-  { key: 'sat' as const,  label: '🛰 Спутник' },
+  { key: 'osm'  as const, label: '🗺 Карта' },
+  { key: 'sat'  as const, label: '🛰 Спутник' },
   { key: 'dark' as const, label: '🌙 Тёмная' },
 ]
 
 export default function LayersPanel() {
   const { layers, toggleLayer, activeWellTypes, toggleWellType, basemap, setBasemap, editMode, setEditMode } = useStore()
 
+  // Инлайн форма пароля (вместо prompt)
+  const [showPasswordInput, setShowPasswordInput] = useState(false)
+  const [passwordInput, setPasswordInput] = useState('')
+  const [passwordError, setPasswordError] = useState('')
+
   const handleEditMode = () => {
     if (!editMode) {
-      const pwd = prompt('Введите пароль редактора:')
-      if (pwd === 'kalamkas2024') setEditMode(true)
-      else if (pwd !== null) alert('Неверный пароль')
+      setShowPasswordInput(true)
+      setPasswordError('')
     } else {
       setEditMode(false)
+    }
+  }
+
+  const handlePasswordSubmit = () => {
+    if (passwordInput === 'kalamkas2024') {
+      setEditMode(true)
+      setShowPasswordInput(false)
+      setPasswordInput('')
+      setPasswordError('')
+    } else {
+      setPasswordError('Неверный пароль')
+      setPasswordInput('')
     }
   }
 
@@ -287,11 +396,11 @@ export default function LayersPanel() {
               key={b.key}
               onClick={() => setBasemap(b.key)}
               style={{
-                flex: 1, padding: '5px 2px', fontSize: 10,
+                flex: 1, padding: '10px 4px', fontSize: 12, minHeight: 44,
                 background: basemap === b.key ? '#1d4ed8' : '#1e293b',
                 color: basemap === b.key ? '#fff' : '#94a3b8',
                 border: '1px solid ' + (basemap === b.key ? '#3b82f6' : '#334155'),
-                borderRadius: 4, cursor: 'pointer'
+                borderRadius: 6, cursor: 'pointer', touchAction: 'manipulation',
               }}
             >
               {b.label}
@@ -306,13 +415,14 @@ export default function LayersPanel() {
           Слои
         </div>
         {[
-          { key: 'roads', label: 'Дороги', icon: '🛣' },
-          { key: 'bkns',  label: 'БКНС (11)',  icon: '🔴' },
-          { key: 'gu',    label: 'ГУ (73)',     icon: '🟡' },
-          { key: 'wells', label: 'Скважины',    icon: '⚫' },
+          { key: 'roads', label: 'Дороги',    icon: '🛣' },
+          { key: 'bkns',  label: 'БКНС (11)', icon: '🔴' },
+          { key: 'gu',    label: 'ГУ (73)',    icon: '🟡' },
+          { key: 'wells', label: 'Скважины',   icon: '⚫' },
         ].map(l => (
-          <label key={l.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', cursor: 'pointer', fontSize: 13 }}>
-            <input type="checkbox" checked={layers[l.key] ?? false} onChange={() => toggleLayer(l.key)} />
+          <label key={l.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 0', cursor: 'pointer', fontSize: 13, touchAction: 'manipulation' }}>
+            <input type="checkbox" checked={layers[l.key] ?? false} onChange={() => toggleLayer(l.key)}
+              style={{ width: 18, height: 18 }} />
             <span>{l.icon} {l.label}</span>
           </label>
         ))}
@@ -325,12 +435,9 @@ export default function LayersPanel() {
             Типы скважин
           </div>
           {WELL_TYPES.map(({ key, label, color, count }) => (
-            <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0', cursor: 'pointer', fontSize: 12 }}>
-              <input
-                type="checkbox"
-                checked={activeWellTypes.has(key)}
-                onChange={() => toggleWellType(key)}
-              />
+            <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', cursor: 'pointer', fontSize: 12, touchAction: 'manipulation' }}>
+              <input type="checkbox" checked={activeWellTypes.has(key)} onChange={() => toggleWellType(key)}
+                style={{ width: 18, height: 18 }} />
               <span style={{ width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0 }} />
               <span style={{ flex: 1 }}>{label}</span>
               <span style={{ fontSize: 10, color: '#475569' }}>{count}</span>
@@ -344,15 +451,65 @@ export default function LayersPanel() {
         <button
           onClick={handleEditMode}
           style={{
-            width: '100%', padding: '7px', fontSize: 12,
+            width: '100%', padding: '10px', fontSize: 12, minHeight: 44,
             background: editMode ? '#7c3aed' : '#1e293b',
             color: editMode ? '#fff' : '#94a3b8',
             border: '1px solid ' + (editMode ? '#7c3aed' : '#334155'),
-            borderRadius: 6, cursor: 'pointer'
+            borderRadius: 6, cursor: 'pointer', touchAction: 'manipulation',
           }}
         >
           {editMode ? '✏️ Редактор: ВКЛ' : '🔒 Редактор графа'}
         </button>
+
+        {/* Форма пароля (вместо prompt) */}
+        {showPasswordInput && (
+          <div style={{
+            marginTop: 8, background: '#1e293b', border: '1px solid #334155',
+            borderRadius: 8, padding: 12,
+            display: 'flex', flexDirection: 'column', gap: 8
+          }}>
+            <div style={{ fontSize: 12, color: '#94a3b8' }}>Пароль редактора:</div>
+            <input
+              type="password"
+              value={passwordInput}
+              onChange={e => setPasswordInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handlePasswordSubmit()}
+              placeholder="Введите пароль..."
+              autoFocus
+              style={{
+                padding: '10px 8px', fontSize: 16,
+                background: '#0f172a', color: '#e2e8f0',
+                border: '1px solid ' + (passwordError ? '#ef4444' : '#334155'),
+                borderRadius: 6, outline: 'none',
+              }}
+            />
+            {passwordError && (
+              <div style={{ fontSize: 12, color: '#ef4444' }}>❌ {passwordError}</div>
+            )}
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button
+                onClick={handlePasswordSubmit}
+                style={{
+                  flex: 1, padding: '10px', fontSize: 13, minHeight: 44,
+                  background: '#1d4ed8', color: '#fff',
+                  border: 'none', borderRadius: 6, cursor: 'pointer', touchAction: 'manipulation',
+                }}
+              >
+                Войти
+              </button>
+              <button
+                onClick={() => { setShowPasswordInput(false); setPasswordInput(''); setPasswordError('') }}
+                style={{
+                  padding: '10px 14px', fontSize: 13, minHeight: 44,
+                  background: '#1e293b', color: '#94a3b8',
+                  border: '1px solid #334155', borderRadius: 6, cursor: 'pointer', touchAction: 'manipulation',
+                }}
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        )}
 
         {editMode && <EditorTools />}
       </div>

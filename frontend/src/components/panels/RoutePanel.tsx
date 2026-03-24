@@ -8,10 +8,11 @@ export default function RoutePanel() {
   const [searchQuery, setSearchQuery] = useState({ from: '', to: '' })
   const [searchResults, setSearchResults] = useState<{ from: SearchResult[]; to: SearchResult[] }>({ from: [], to: [] })
   const [activeSearch, setActiveSearch] = useState<'from' | 'to' | null>(null)
+  const [locError, setLocError] = useState('')
 
   const wells = (window as any).__KALAMKAS_DATA?.wells
-  const bkns = (window as any).__KALAMKAS_DATA?.bkns
-  const gu = (window as any).__KALAMKAS_DATA?.gu
+  const bkns  = (window as any).__KALAMKAS_DATA?.bkns
+  const gu    = (window as any).__KALAMKAS_DATA?.gu
 
   const handleSearch = (which: 'from' | 'to', q: string) => {
     setSearchQuery(prev => ({ ...prev, [which]: q }))
@@ -37,16 +38,27 @@ export default function RoutePanel() {
     setRoutePath(null); setRouteInfo(null)
     setSearchQuery({ from: '', to: '' })
     setRouteSelectMode(null)
+    setLocError('')
   }
 
   const locateMe = (which: 'from' | 'to') => {
-    if (!navigator.geolocation) return alert('Геолокация не поддерживается')
-    navigator.geolocation.getCurrentPosition(pos => {
-      const { latitude: lat, longitude: lon } = pos.coords
-      const wp = { lat, lon, name: 'Моё местоположение' }
-      which === 'from' ? setFrom(wp) : setTo(wp)
-      setSearchQuery(prev => ({ ...prev, [which]: 'Моё местоположение' }))
-    }, () => alert('Не удалось получить геолокацию'))
+    setLocError('')
+    if (!navigator.geolocation) {
+      setLocError('Геолокация не поддерживается на этом устройстве')
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const { latitude: lat, longitude: lon } = pos.coords
+        const wp = { lat, lon, name: 'Моё местоположение' }
+        which === 'from' ? setFrom(wp) : setTo(wp)
+        setSearchQuery(prev => ({ ...prev, [which]: 'Моё местоположение' }))
+      },
+      () => {
+        setLocError('Не удалось получить геолокацию. Разрешите доступ к GPS.')
+        setTimeout(() => setLocError(''), 4000)
+      }
+    )
   }
 
   const renderPoint = (which: 'from' | 'to') => {
@@ -55,37 +67,42 @@ export default function RoutePanel() {
     const wp = which === 'from' ? from : to
 
     return (
-      <div style={{ marginBottom: 8 }}>
-        <div style={{ fontSize: 10, color: '#475569', marginBottom: 4 }}>{label}</div>
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ fontSize: 11, color: '#475569', marginBottom: 6 }}>{label}</div>
         <div style={{ display: 'flex', gap: 4 }}>
           <input
             value={searchQuery[which]}
             onChange={e => handleSearch(which, e.target.value)}
             placeholder="Поиск объекта..."
             style={{
-              flex: 1, padding: '6px 8px', fontSize: 12,
+              flex: 1, padding: '10px 12px',
+              fontSize: 16, /* 16px — без автозума на iOS/Android */
               background: '#1e293b', color: '#e2e8f0',
               border: '1px solid ' + (wp ? color : '#334155'),
-              borderRadius: 6, outline: 'none'
+              borderRadius: 6, outline: 'none',
             }}
           />
           <button
             onClick={() => setRouteSelectMode(routeSelectMode === which ? null : which)}
             title="Выбрать на карте"
             style={{
-              padding: '6px 8px', fontSize: 14,
+              minWidth: 44, minHeight: 44, padding: '10px',
+              fontSize: 18,
               background: routeSelectMode === which ? color : '#1e293b',
               color: routeSelectMode === which ? '#fff' : '#94a3b8',
-              border: '1px solid #334155', borderRadius: 6, cursor: 'pointer'
+              border: '1px solid #334155', borderRadius: 6, cursor: 'pointer',
+              touchAction: 'manipulation',
             }}
           >📍</button>
           <button
             onClick={() => locateMe(which)}
             title="Моё местоположение"
             style={{
-              padding: '6px 8px', fontSize: 14,
+              minWidth: 44, minHeight: 44, padding: '10px',
+              fontSize: 18,
               background: '#1e293b', color: '#94a3b8',
-              border: '1px solid #334155', borderRadius: 6, cursor: 'pointer'
+              border: '1px solid #334155', borderRadius: 6, cursor: 'pointer',
+              touchAction: 'manipulation',
             }}
           >📡</button>
         </div>
@@ -101,12 +118,11 @@ export default function RoutePanel() {
                 key={i}
                 onClick={() => selectResult(which, r)}
                 style={{
-                  padding: '6px 10px', fontSize: 12, cursor: 'pointer',
+                  padding: '12px 10px', fontSize: 13, cursor: 'pointer',
                   borderBottom: '1px solid #0f172a',
-                  display: 'flex', gap: 6, alignItems: 'center'
+                  display: 'flex', gap: 6, alignItems: 'center',
+                  touchAction: 'manipulation',
                 }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#334155')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
                 <span>{r.type === 'well' ? '⚫' : r.type === 'bkns' ? '🔴' : '🟡'}</span>
                 <span>{r.name}</span>
@@ -123,25 +139,38 @@ export default function RoutePanel() {
       {routeSelectMode && (
         <div style={{
           background: '#1d4ed8', color: '#fff',
-          padding: '6px 10px', borderRadius: 6, fontSize: 12,
+          padding: '10px 12px', borderRadius: 6, fontSize: 13,
           marginBottom: 10, textAlign: 'center'
         }}>
-          Кликните на карте чтобы выбрать точку "{routeSelectMode === 'from' ? 'Откуда' : 'Куда'}"
+          Кликните на карте — "{routeSelectMode === 'from' ? 'Откуда' : 'Куда'}"
         </div>
       )}
 
       {renderPoint('from')}
       {renderPoint('to')}
 
-      <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+      {/* Сообщение об ошибке геолокации */}
+      {locError && (
+        <div style={{
+          background: '#450a0a', border: '1px solid #7f1d1d',
+          borderRadius: 6, padding: '8px 10px',
+          fontSize: 12, color: '#fca5a5', marginBottom: 8
+        }}>
+          ❌ {locError}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
         <button
           disabled={!from || !to}
           onClick={() => (window as any).__BUILD_ROUTE?.()}
           style={{
-            flex: 1, padding: '8px', fontSize: 13, fontWeight: 600,
+            flex: 1, padding: '12px', fontSize: 14, fontWeight: 600, minHeight: 48,
             background: from && to ? '#1d4ed8' : '#1e293b',
             color: from && to ? '#fff' : '#475569',
-            border: 'none', borderRadius: 6, cursor: from && to ? 'pointer' : 'default'
+            border: 'none', borderRadius: 6,
+            cursor: from && to ? 'pointer' : 'default',
+            touchAction: 'manipulation',
           }}
         >
           🗺 Построить маршрут
@@ -149,33 +178,35 @@ export default function RoutePanel() {
         <button
           onClick={clearRoute}
           style={{
-            padding: '8px 10px', fontSize: 13,
+            minWidth: 48, minHeight: 48, padding: '12px',
+            fontSize: 16,
             background: '#1e293b', color: '#94a3b8',
-            border: '1px solid #334155', borderRadius: 6, cursor: 'pointer'
+            border: '1px solid #334155', borderRadius: 6, cursor: 'pointer',
+            touchAction: 'manipulation',
           }}
         >✕</button>
       </div>
 
-      {/* Результат маршрута */}
       {routeInfo && (
         <div style={{
           marginTop: 12, padding: 12,
           background: '#1e293b', borderRadius: 8,
           border: '1px solid #334155'
         }}>
-          <div style={{ fontSize: 13, color: '#22c55e', fontWeight: 600, marginBottom: 4 }}>
+          <div style={{ fontSize: 14, color: '#22c55e', fontWeight: 600, marginBottom: 4 }}>
             ✅ Маршрут построен
           </div>
-          <div style={{ fontSize: 12, color: '#94a3b8' }}>
+          <div style={{ fontSize: 13, color: '#94a3b8' }}>
             📏 {(routeInfo.distance / 1000).toFixed(1)} км
           </div>
-          <div style={{ fontSize: 12, color: '#94a3b8' }}>
+          <div style={{ fontSize: 13, color: '#94a3b8' }}>
             ⏱ ~{routeInfo.duration.toFixed(0)} мин (30 км/ч)
           </div>
         </div>
       )}
+
       {routePath !== null && routePath.length === 0 && from && to && (
-        <div style={{ marginTop: 8, fontSize: 12, color: '#f59e0b', textAlign: 'center' }}>
+        <div style={{ marginTop: 8, fontSize: 13, color: '#f59e0b', textAlign: 'center' }}>
           ⚠️ Маршрут не найден — нет дороги
         </div>
       )}

@@ -404,7 +404,8 @@ export default function MapView() {
         const color = editSubmode === 'del' ? '#ef4444'
           : isSelected ? '#22c55e'
           : baseColor
-        const radius = isSelected ? 10 : editSubmode === 'del' ? 7 : 5
+        const isMobile = window.innerWidth <= 768
+        const radius = isSelected ? (isMobile ? 16 : 10) : editSubmode === 'del' ? (isMobile ? 12 : 7) : (isMobile ? 9 : 5)
         return (
           <CircleMarker
             key={`node-${i}`}
@@ -431,7 +432,7 @@ export default function MapView() {
             <CircleMarker
               key={i}
               center={[lat, lon]}
-              radius={3}
+              radius={window.innerWidth <= 768 ? 8 : 3}
               pathOptions={{ color, fillColor: color, fillOpacity: 0.85, weight: 0.5 }}
               eventHandlers={{ click: () => handleObjectClick(f.properties.name || `Скв. ${f.properties.well_num}`, 'well', lat, lon, f.properties) }}
             />

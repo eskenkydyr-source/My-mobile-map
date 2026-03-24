@@ -31,7 +31,7 @@ export default function Sidebar() {
             key={tab}
             onClick={() => setActiveTab(tab)}
             style={{
-              flex: 1, padding: '8px 4px', fontSize: 11,
+              flex: 1, padding: '12px 4px', fontSize: 12, minHeight: 44,
               background: activeTab === tab ? '#1e293b' : 'transparent',
               color: activeTab === tab ? '#38bdf8' : '#64748b',
               border: 'none', borderBottom: activeTab === tab ? '2px solid #38bdf8' : '2px solid transparent',
