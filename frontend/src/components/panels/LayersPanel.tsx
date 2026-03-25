@@ -81,12 +81,16 @@ function EditorTools() {
     URL.revokeObjectURL(url)
   }
 
-  // Импорт дорог из OpenStreetMap через Overpass API
+  // Очистить весь граф (без перезагрузки страницы)
+  const clearGraph = () => {
+    ;(window as any).__SAVE_GRAPH?.({ nodes: [], edges: [] })
+  }
+
+  // Импорт дорог из OpenStreetMap — узел каждые 25м вдоль каждой дороги
   const importFromOSM = async () => {
     setImporting(true)
     setImportMsg('📡 Загружаю дороги из OpenStreetMap...')
     try {
-      // Bounding box месторождения Қаламқас: (minlat, minlon, maxlat, maxlon)
       const query = `[out:json][timeout:60];
 way["highway"](45.28,51.70,45.50,52.20);
 out geom;`
@@ -97,51 +101,64 @@ out geom;`
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
       const data = await resp.json()
 
-      const current = (window as any).__KALAMKAS_GRAPH
-      if (!current) throw new Error('Граф не загружен')
+      // Строим граф с нуля — без старых узлов
+      const nodes: { lat: number; lon: number; type: string }[] = []
+      const edges: [number, number, number][] = []
 
-      const newNodes = [...current.nodes]
-      const newEdges: [number, number, number][] = [...current.edges]
+      const STEP_M = 25          // узел каждые 25 метров
+      const MERGE_M = 0.00015    // ~15м — порог слияния узлов в одну точку
 
-      // Порог слияния узлов ~10м (в градусах)
-      const THRESHOLD = 0.0001
-
+      // Найти ближайший узел в радиусе MERGE_M или добавить новый
       const findOrAdd = (lat: number, lon: number): number => {
-        for (let i = 0; i < newNodes.length; i++) {
-          if (Math.abs(newNodes[i].lat - lat) < THRESHOLD && Math.abs(newNodes[i].lon - lon) < THRESHOLD)
+        for (let i = 0; i < nodes.length; i++) {
+          if (Math.abs(nodes[i].lat - lat) < MERGE_M && Math.abs(nodes[i].lon - lon) < MERGE_M)
             return i
         }
-        newNodes.push({ lat, lon, type: 'road' })
-        return newNodes.length - 1
+        nodes.push({ lat, lon, type: 'road' })
+        return nodes.length - 1
       }
 
-      let addedNodes = 0, addedEdges = 0
+      // Добавить ребро если его ещё нет
+      const addEdge = (a: number, b: number) => {
+        if (a === b) return
+        if (edges.some(([f, t]) => (f === a && t === b) || (f === b && t === a))) return
+        const na = nodes[a], nb = nodes[b]
+        const dist = Math.round(haversine(na.lat, na.lon, nb.lat, nb.lon))
+        edges.push([a, b, dist])
+      }
 
+      let wayCount = 0
       for (const way of data.elements) {
         if (way.type !== 'way' || !way.geometry || way.geometry.length < 2) continue
-        let prevIdx: number | null = null
-        for (const pt of way.geometry) {
-          const lat = parseFloat(pt.lat.toFixed(6))
-          const lon = parseFloat(pt.lon.toFixed(6))
-          const prevLen = newNodes.length
-          const idx = findOrAdd(lat, lon)
-          if (newNodes.length > prevLen) addedNodes++
-          if (prevIdx !== null && prevIdx !== idx) {
-            const exists = newEdges.some(([f, t]) => (f === prevIdx && t === idx) || (f === idx && t === prevIdx))
-            if (!exists) {
-              const a = newNodes[prevIdx], b = newNodes[idx]
-              const dist = Math.round(haversine(a.lat, a.lon, b.lat, b.lon))
-              newEdges.push([prevIdx, idx, dist])
-              addedEdges++
-            }
+        wayCount++
+
+        // Обрабатываем каждый отрезок OSM пути
+        for (let i = 0; i < way.geometry.length - 1; i++) {
+          const p1 = way.geometry[i]
+          const p2 = way.geometry[i + 1]
+          const segDist = haversine(p1.lat, p1.lon, p2.lat, p2.lon)
+
+          // Расставить узлы каждые STEP_M метров вдоль отрезка
+          const count = Math.max(1, Math.ceil(segDist / STEP_M))
+          let prevIdx = findOrAdd(
+            parseFloat(p1.lat.toFixed(6)),
+            parseFloat(p1.lon.toFixed(6))
+          )
+
+          for (let j = 1; j <= count; j++) {
+            const t = j / count
+            const lat = parseFloat((p1.lat + t * (p2.lat - p1.lat)).toFixed(6))
+            const lon = parseFloat((p1.lon + t * (p2.lon - p1.lon)).toFixed(6))
+            const currIdx = findOrAdd(lat, lon)
+            addEdge(prevIdx, currIdx)
+            prevIdx = currIdx
           }
-          prevIdx = idx
         }
       }
 
-      ;(window as any).__SAVE_GRAPH?.({ nodes: newNodes, edges: newEdges })
-      setImportMsg(`✅ Добавлено: ${addedNodes} узлов, ${addedEdges} рёбер из OSM`)
-      setTimeout(() => setImportMsg(''), 6000)
+      ;(window as any).__SAVE_GRAPH?.({ nodes, edges })
+      setImportMsg(`✅ Готово: ${nodes.length} узлов, ${edges.length} рёбер (${wayCount} дорог OSM)`)
+      setTimeout(() => setImportMsg(''), 8000)
     } catch (e: any) {
       setImportMsg('❌ Ошибка: ' + e.message)
       setTimeout(() => setImportMsg(''), 5000)
@@ -229,21 +246,37 @@ out geom;`
         </div>
       )}
 
-      {/* Импорт дорог из OpenStreetMap */}
-      <button
-        onClick={importFromOSM}
-        disabled={importing}
-        style={{
-          width: '100%', padding: '10px', fontSize: 12, fontWeight: 600, minHeight: 44,
-          background: importing ? '#1c1917' : '#14532d',
-          color: importing ? '#78716c' : '#6ee7b7',
-          border: '1px solid ' + (importing ? '#44403c' : '#065f46'),
-          borderRadius: 6, cursor: importing ? 'wait' : 'pointer',
-          touchAction: 'manipulation',
-        }}
-      >
-        {importing ? '⏳ Загружаю из OSM...' : '🗺 Импорт дорог из OSM'}
-      </button>
+      {/* Очистить граф + Импорт OSM */}
+      <div style={{ display: 'flex', gap: 4 }}>
+        <button
+          onClick={clearGraph}
+          disabled={importing}
+          style={{
+            flex: '0 0 auto', padding: '10px 8px', fontSize: 12, fontWeight: 600, minHeight: 44,
+            background: '#450a0a', color: '#fca5a5',
+            border: '1px solid #7f1d1d',
+            borderRadius: 6, cursor: 'pointer',
+            touchAction: 'manipulation',
+          }}
+          title="Удалить все узлы и рёбра"
+        >
+          🗑 Очистить
+        </button>
+        <button
+          onClick={importFromOSM}
+          disabled={importing}
+          style={{
+            flex: 1, padding: '10px', fontSize: 12, fontWeight: 600, minHeight: 44,
+            background: importing ? '#1c1917' : '#14532d',
+            color: importing ? '#78716c' : '#6ee7b7',
+            border: '1px solid ' + (importing ? '#44403c' : '#065f46'),
+            borderRadius: 6, cursor: importing ? 'wait' : 'pointer',
+            touchAction: 'manipulation',
+          }}
+        >
+          {importing ? '⏳ Загружаю из OSM...' : '🗺 Импорт дорог OSM (25м)'}
+        </button>
+      </div>
 
       {importMsg && (
         <div style={{
