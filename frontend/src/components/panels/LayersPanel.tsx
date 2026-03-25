@@ -91,15 +91,35 @@ function EditorTools() {
     setImporting(true)
     setImportMsg('📡 Загружаю дороги из OpenStreetMap...')
     try {
-      const query = `[out:json][timeout:60];
-way["highway"](45.28,51.70,45.50,52.20);
+      // Уточнённый bbox только месторождения Қаламқас
+      const query = `[out:json][timeout:90];
+way["highway"](45.30,51.78,45.45,52.10);
 out geom;`
-      const resp = await fetch('https://overpass-api.de/api/interpreter', {
-        method: 'POST',
-        body: query,
-      })
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-      const data = await resp.json()
+
+      // Несколько зеркал Overpass — пробуем по очереди
+      const MIRRORS = [
+        'https://overpass-api.de/api/interpreter',
+        'https://overpass.kumi.systems/api/interpreter',
+        'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+      ]
+
+      let data: any = null
+      for (const mirror of MIRRORS) {
+        setImportMsg(`📡 Пробую ${new URL(mirror).hostname}...`)
+        try {
+          const resp = await fetch(mirror, {
+            method: 'POST',
+            body: query,
+            signal: AbortSignal.timeout(50000),
+          })
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+          data = await resp.json()
+          break
+        } catch {
+          // Пробуем следующее зеркало
+        }
+      }
+      if (!data) throw new Error('Все серверы недоступны, попробуйте позже')
 
       // Строим граф с нуля — без старых узлов
       const nodes: { lat: number; lon: number; type: string }[] = []
