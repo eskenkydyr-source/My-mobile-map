@@ -2,6 +2,7 @@ import { useState } from 'react'
 import MapView from './components/MapView'
 import Sidebar from './components/Sidebar'
 import BottomSheet from './components/BottomSheet'
+import SearchBar from './components/SearchBar'
 import { useStore } from './store/useStore'
 import './App.css'
 
@@ -80,7 +81,10 @@ export default function App() {
         <Sidebar />
       </div>
 
-      <MapView />
+      <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <MapView />
+        <SearchBar />
+      </div>
 
       {/* Мобильный bottom sheet (скрыт на десктопе через CSS) */}
       <BottomSheet />
