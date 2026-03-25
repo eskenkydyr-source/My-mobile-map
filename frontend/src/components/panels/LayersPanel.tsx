@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth'
 import { doc, setDoc } from 'firebase/firestore'
-import { auth, db } from '../../firebase'
+import { ref, uploadString } from 'firebase/storage'
+import { auth, db, storage } from '../../firebase'
 import { useStore } from '../../store/useStore'
 import type { WellType } from '../../store/useStore'
 import { haversine } from '../../utils/distance'
@@ -44,8 +45,8 @@ function EditorTools() {
   const [importing, setImporting] = useState(false)
   const [importMsg, setImportMsg] = useState('')
 
-  // Сохранить граф в Firestore (коллекция "graph", документ "current")
-  // Firestore не поддерживает вложенные массивы — конвертируем edges в объекты
+  // Сохранить граф в Firebase Storage (JSON файл до 5ГБ)
+  // В Firestore хранятся только метаданные (дата, кол-во узлов)
   const saveToCloud = async () => {
     const data = (window as any).__KALAMKAS_GRAPH
     if (!data) { setSaveError('Граф не загружен'); return }
@@ -54,10 +55,21 @@ function EditorTools() {
     setSaveStatus('idle')
     setSaveError('')
     try {
-      await setDoc(doc(db, 'graph', 'current'), {
+      // Конвертируем edges в объекты (для совместимости)
+      const payload = {
         nodes: data.nodes,
         edges: data.edges.map((e: [number, number, number]) => ({ from: e[0], to: e[1], dist: e[2] })),
+      }
+      // Загружаем JSON в Firebase Storage
+      const graphRef = ref(storage, 'graph/current.json')
+      await uploadString(graphRef, JSON.stringify(payload), 'raw', {
+        contentType: 'application/json',
+      })
+      // Записываем метаданные в Firestore (маленький документ)
+      await setDoc(doc(db, 'graph', 'current'), {
         updatedAt: new Date().toISOString(),
+        nodeCount: data.nodes.length,
+        edgeCount: data.edges.length,
       })
       setSaveStatus('ok')
       setTimeout(() => setSaveStatus('idle'), 3000)

@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { MapContainer, TileLayer, CircleMarker, Popup, GeoJSON, Polyline, useMapEvents, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { doc, onSnapshot } from 'firebase/firestore'
-import { db } from '../firebase'
+import { ref, getBytes } from 'firebase/storage'
+import { db, storage } from '../firebase'
 import { useStore } from '../store/useStore'
 import { haversine, nearestNode } from '../utils/distance'
 import type { GraphNode } from '../utils/distance'
@@ -140,25 +141,33 @@ export default function MapView() {
     )
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Real-time синхронизация графа из Firestore
-  // Когда редактор на десктопе сохраняет граф — мобиль обновляется автоматически
+  // Real-time синхронизация графа: Firestore хранит метаданные, Storage — JSON файл
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'graph', 'current'), (snap) => {
+    const unsub = onSnapshot(doc(db, 'graph', 'current'), async (snap) => {
       if (!snap.exists()) return
-      const data = snap.data()
-      if (!data?.nodes || !data?.edges) return
-      // Конвертируем объекты обратно в массивы [from, to, dist]
-      const edges = data.edges.map((e: any) =>
-        Array.isArray(e) ? e : [e.from, e.to, e.dist]
-      )
-      const updated = { nodes: data.nodes, edges }
-      setEditGraph(updated)
-      ;(window as any).__KALAMKAS_GRAPH = updated
-      // Сохранить локально как кэш
-      localStorage.setItem('kalamkas_graph', JSON.stringify(updated))
-      console.log('[Kalamkas] Граф обновлён из Firebase:', data.updatedAt)
+      const meta = snap.data()
+      if (!meta?.updatedAt) return
+      try {
+        // Скачиваем JSON из Firebase Storage
+        const graphRef = ref(storage, 'graph/current.json')
+        const bytes = await getBytes(graphRef)
+        const text = new TextDecoder().decode(bytes)
+        const data = JSON.parse(text)
+        if (!data?.nodes || !data?.edges) return
+        // Конвертируем объекты обратно в массивы [from, to, dist]
+        const edges = data.edges.map((e: any) =>
+          Array.isArray(e) ? e : [e.from, e.to, e.dist]
+        )
+        const updated = { nodes: data.nodes, edges }
+        setEditGraph(updated)
+        ;(window as any).__KALAMKAS_GRAPH = updated
+        localStorage.setItem('kalamkas_graph', JSON.stringify(updated))
+        console.log('[Kalamkas] Граф обновлён из Firebase Storage:', meta.updatedAt,
+          `(${meta.nodeCount} узлов, ${meta.edgeCount} рёбер)`)
+      } catch (err: any) {
+        console.warn('[Kalamkas] Ошибка загрузки графа:', err.message)
+      }
     }, (err) => {
-      // Ошибка подключения — работаем с локальными данными
       console.warn('[Kalamkas] Firebase недоступен:', err.message)
     })
     return unsub
