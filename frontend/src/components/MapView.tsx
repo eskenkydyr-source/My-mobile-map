@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { MapContainer, TileLayer, CircleMarker, Popup, GeoJSON, Polyline, useMapEvents, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
+import { doc, onSnapshot } from 'firebase/firestore'
+import { db } from '../firebase'
 import { useStore } from '../store/useStore'
 import { haversine, nearestNode } from '../utils/distance'
 import type { GraphNode } from '../utils/distance'
@@ -125,18 +127,37 @@ export default function MapView() {
           nodes: gr.nodes.map((n: any) => Array.isArray(n) ? { lat: n[0], lon: n[1], type: n[2] || "road" } : n) as GraphNode[],
           edges: gr.edges as [number,number,number][]
         }
-        // Загрузить сохранённые изменения из localStorage
+        // Загрузить сохранённые изменения: localStorage как fallback
         const saved = localStorage.getItem('kalamkas_graph')
         const graph = saved ? JSON.parse(saved) : parsed
         setGraphData(parsed)
         setEditGraph({ ...graph })
         ;(window as any).__KALAMKAS_GRAPH = graph
-        // Глобально для RoutePanel поиска
         ;(window as any).__KALAMKAS_DATA = { wells: w, bkns: b, gu: g }
         ;(window as any).__DATA_SOURCE = source
         console.log(`[Kalamkas] Данные загружены: ${source}`)
       })
     )
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Real-time синхронизация графа из Firestore
+  // Когда редактор на десктопе сохраняет граф — мобиль обновляется автоматически
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'graph', 'current'), (snap) => {
+      if (!snap.exists()) return
+      const data = snap.data()
+      if (!data?.nodes || !data?.edges) return
+      const updated = { nodes: data.nodes, edges: data.edges }
+      setEditGraph(updated)
+      ;(window as any).__KALAMKAS_GRAPH = updated
+      // Сохранить локально как кэш
+      localStorage.setItem('kalamkas_graph', JSON.stringify(updated))
+      console.log('[Kalamkas] Граф обновлён из Firebase:', data.updatedAt)
+    }, (err) => {
+      // Ошибка подключения — работаем с локальными данными
+      console.warn('[Kalamkas] Firebase недоступен:', err.message)
+    })
+    return unsub
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Построение маршрута — использует editGraph (с изменениями) если он есть

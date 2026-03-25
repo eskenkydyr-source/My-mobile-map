@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth'
+import { doc, setDoc } from 'firebase/firestore'
+import { auth, db } from '../../firebase'
 import { useStore } from '../../store/useStore'
 import type { WellType } from '../../store/useStore'
 
@@ -36,19 +39,10 @@ function EditorTools() {
   const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'ok' | 'err'>('idle')
   const [saveError, setSaveError] = useState('')
-
-  // Инлайн форма для токена (вместо prompt)
-  const [showTokenInput, setShowTokenInput] = useState(false)
-  const [tokenInput, setTokenInput] = useState('')
-
-  // Инлайн подтверждение сброса (вместо confirm)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
 
-  const GITHUB_REPO = 'eskenkydyr-source/kalamkas-app'
-  const GITHUB_FILE = 'data/graph.json'
-  const GITHUB_BRANCH = 'gh-pages'
-
-  const doSave = async (token: string) => {
+  // Сохранить граф в Firestore (коллекция "graph", документ "current")
+  const saveToCloud = async () => {
     const data = (window as any).__KALAMKAS_GRAPH
     if (!data) { setSaveError('Граф не загружен'); return }
 
@@ -56,31 +50,11 @@ function EditorTools() {
     setSaveStatus('idle')
     setSaveError('')
     try {
-      const headRes = await fetch(
-        `https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}?ref=${GITHUB_BRANCH}`,
-        { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github+json' } }
-      )
-      if (!headRes.ok) throw new Error(`GitHub API: ${headRes.status}`)
-      const { sha } = await headRes.json()
-
-      const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))))
-
-      const putRes = await fetch(
-        `https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`,
-        {
-          method: 'PUT',
-          headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: `graph: save changes ${new Date().toISOString().slice(0,16)}`,
-            content, sha, branch: GITHUB_BRANCH
-          })
-        }
-      )
-      if (!putRes.ok) {
-        const err = await putRes.json()
-        if (putRes.status === 401) { localStorage.removeItem('gh_token'); throw new Error('Неверный токен') }
-        throw new Error(err.message || putRes.status)
-      }
+      await setDoc(doc(db, 'graph', 'current'), {
+        nodes: data.nodes,
+        edges: data.edges,
+        updatedAt: new Date().toISOString(),
+      })
       setSaveStatus('ok')
       setTimeout(() => setSaveStatus('idle'), 3000)
     } catch (e: any) {
@@ -89,26 +63,6 @@ function EditorTools() {
     } finally {
       setSaving(false)
     }
-  }
-
-  const saveToCloud = () => {
-    const data = (window as any).__KALAMKAS_GRAPH
-    if (!data) { setSaveError('Граф не загружен'); return }
-
-    const token = localStorage.getItem('gh_token')
-    if (!token) {
-      setShowTokenInput(true)
-      return
-    }
-    doSave(token)
-  }
-
-  const handleTokenSubmit = () => {
-    if (!tokenInput.trim()) return
-    localStorage.setItem('gh_token', tokenInput.trim())
-    setShowTokenInput(false)
-    doSave(tokenInput.trim())
-    setTokenInput('')
   }
 
   const exportGraph = () => {
@@ -202,59 +156,6 @@ function EditorTools() {
         </div>
       )}
 
-      {/* Форма ввода токена (вместо prompt) */}
-      {showTokenInput && (
-        <div style={{
-          background: '#1e293b', border: '1px solid #334155',
-          borderRadius: 8, padding: 12,
-          display: 'flex', flexDirection: 'column', gap: 8
-        }}>
-          <div style={{ fontSize: 12, color: '#94a3b8' }}>
-            Введите GitHub Personal Access Token:
-          </div>
-          <div style={{ fontSize: 10, color: '#475569' }}>
-            github.com → Settings → Developer settings → Fine-grained tokens → Contents: Read & Write
-          </div>
-          <input
-            type="password"
-            value={tokenInput}
-            onChange={e => setTokenInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleTokenSubmit()}
-            placeholder="github_pat_..."
-            autoFocus
-            style={{
-              padding: '10px 8px', fontSize: 14,
-              background: '#0f172a', color: '#e2e8f0',
-              border: '1px solid #334155', borderRadius: 6, outline: 'none',
-            }}
-          />
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button
-              onClick={handleTokenSubmit}
-              style={{
-                flex: 1, padding: '10px', fontSize: 13, fontWeight: 600, minHeight: 44,
-                background: '#1d4ed8', color: '#fff',
-                border: 'none', borderRadius: 6, cursor: 'pointer',
-                touchAction: 'manipulation',
-              }}
-            >
-              Сохранить
-            </button>
-            <button
-              onClick={() => { setShowTokenInput(false); setTokenInput('') }}
-              style={{
-                padding: '10px 14px', fontSize: 13, minHeight: 44,
-                background: '#1e293b', color: '#94a3b8',
-                border: '1px solid #334155', borderRadius: 6, cursor: 'pointer',
-                touchAction: 'manipulation',
-              }}
-            >
-              Отмена
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Сообщение об ошибке */}
       {saveError && (
         <div style={{
@@ -277,7 +178,7 @@ function EditorTools() {
           transition: 'all 0.2s', touchAction: 'manipulation',
         }}
       >
-        {saving ? '⏳ Сохраняю...' : saveStatus === 'ok' ? '✅ Сохранено' : '☁️ Сохранить на все устройства'}
+        {saving ? '⏳ Сохраняю...' : saveStatus === 'ok' ? '✅ Сохранено в Firebase' : '☁️ Сохранить на все устройства'}
       </button>
 
       <div style={{ display: 'flex', gap: 4 }}>
@@ -293,7 +194,6 @@ function EditorTools() {
           💾 Экспорт JSON
         </button>
 
-        {/* Кнопка сброса */}
         {!showResetConfirm ? (
           <button
             onClick={() => setShowResetConfirm(true)}
@@ -356,29 +256,42 @@ const BASE_LAYERS = [
 export default function LayersPanel() {
   const { layers, toggleLayer, activeWellTypes, toggleWellType, basemap, setBasemap, editMode, setEditMode } = useStore()
 
-  // Инлайн форма пароля (вместо prompt)
-  const [showPasswordInput, setShowPasswordInput] = useState(false)
-  const [passwordInput, setPasswordInput] = useState('')
-  const [passwordError, setPasswordError] = useState('')
+  // Firebase Auth: форма входа
+  const [showLoginInput, setShowLoginInput] = useState(false)
+  const [loginEmail, setLoginEmail] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
+  const [loginError, setLoginError] = useState('')
+  const [loginLoading, setLoginLoading] = useState(false)
 
   const handleEditMode = () => {
     if (!editMode) {
-      setShowPasswordInput(true)
-      setPasswordError('')
+      if (auth.currentUser) {
+        setEditMode(true)
+      } else {
+        setShowLoginInput(true)
+        setLoginError('')
+      }
     } else {
       setEditMode(false)
+      signOut(auth)
     }
   }
 
-  const handlePasswordSubmit = () => {
-    if (passwordInput === 'kalamkas2024') {
+  const handleLoginSubmit = async () => {
+    if (!loginEmail.trim() || !loginPassword) return
+    setLoginLoading(true)
+    setLoginError('')
+    try {
+      await signInWithEmailAndPassword(auth, loginEmail.trim(), loginPassword)
       setEditMode(true)
-      setShowPasswordInput(false)
-      setPasswordInput('')
-      setPasswordError('')
-    } else {
-      setPasswordError('Неверный пароль')
-      setPasswordInput('')
+      setShowLoginInput(false)
+      setLoginEmail('')
+      setLoginPassword('')
+    } catch {
+      setLoginError('Неверный email или пароль')
+      setLoginPassword('')
+    } finally {
+      setLoginLoading(false)
     }
   }
 
@@ -461,44 +374,57 @@ export default function LayersPanel() {
           {editMode ? '✏️ Редактор: ВКЛ' : '🔒 Редактор графа'}
         </button>
 
-        {/* Форма пароля (вместо prompt) */}
-        {showPasswordInput && (
+        {/* Firebase Auth: форма входа */}
+        {showLoginInput && (
           <div style={{
             marginTop: 8, background: '#1e293b', border: '1px solid #334155',
             borderRadius: 8, padding: 12,
             display: 'flex', flexDirection: 'column', gap: 8
           }}>
-            <div style={{ fontSize: 12, color: '#94a3b8' }}>Пароль редактора:</div>
+            <div style={{ fontSize: 12, color: '#94a3b8' }}>Вход в редактор графа:</div>
             <input
-              type="password"
-              value={passwordInput}
-              onChange={e => setPasswordInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handlePasswordSubmit()}
-              placeholder="Введите пароль..."
+              type="email"
+              value={loginEmail}
+              onChange={e => setLoginEmail(e.target.value)}
+              placeholder="Email"
               autoFocus
               style={{
                 padding: '10px 8px', fontSize: 16,
                 background: '#0f172a', color: '#e2e8f0',
-                border: '1px solid ' + (passwordError ? '#ef4444' : '#334155'),
+                border: '1px solid #334155', borderRadius: 6, outline: 'none',
+              }}
+            />
+            <input
+              type="password"
+              value={loginPassword}
+              onChange={e => setLoginPassword(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleLoginSubmit()}
+              placeholder="Пароль"
+              style={{
+                padding: '10px 8px', fontSize: 16,
+                background: '#0f172a', color: '#e2e8f0',
+                border: '1px solid ' + (loginError ? '#ef4444' : '#334155'),
                 borderRadius: 6, outline: 'none',
               }}
             />
-            {passwordError && (
-              <div style={{ fontSize: 12, color: '#ef4444' }}>❌ {passwordError}</div>
+            {loginError && (
+              <div style={{ fontSize: 12, color: '#ef4444' }}>❌ {loginError}</div>
             )}
             <div style={{ display: 'flex', gap: 6 }}>
               <button
-                onClick={handlePasswordSubmit}
+                onClick={handleLoginSubmit}
+                disabled={loginLoading}
                 style={{
-                  flex: 1, padding: '10px', fontSize: 13, minHeight: 44,
-                  background: '#1d4ed8', color: '#fff',
-                  border: 'none', borderRadius: 6, cursor: 'pointer', touchAction: 'manipulation',
+                  flex: 1, padding: '10px', fontSize: 13, fontWeight: 600, minHeight: 44,
+                  background: loginLoading ? '#1e3a5f' : '#1d4ed8', color: '#fff',
+                  border: 'none', borderRadius: 6,
+                  cursor: loginLoading ? 'wait' : 'pointer', touchAction: 'manipulation',
                 }}
               >
-                Войти
+                {loginLoading ? '⏳ Вход...' : 'Войти'}
               </button>
               <button
-                onClick={() => { setShowPasswordInput(false); setPasswordInput(''); setPasswordError('') }}
+                onClick={() => { setShowLoginInput(false); setLoginEmail(''); setLoginPassword(''); setLoginError('') }}
                 style={{
                   padding: '10px 14px', fontSize: 13, minHeight: 44,
                   background: '#1e293b', color: '#94a3b8',
