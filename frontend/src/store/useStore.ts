@@ -55,6 +55,10 @@ interface Store {
   // Активная вкладка
   activeTab: 'layers' | 'route' | 'object'
   setActiveTab: (t: 'layers' | 'route' | 'object') => void
+
+  // Навигация
+  navActive: boolean
+  setNavActive: (v: boolean) => void
 }
 
 let markerCounter = 0
@@ -107,4 +111,7 @@ export const useStore = create<Store>((set, _get) => ({
 
   activeTab: 'layers',
   setActiveTab: (t) => set({ activeTab: t }),
+
+  navActive: false,
+  setNavActive: (v) => set({ navActive: v }),
 }))

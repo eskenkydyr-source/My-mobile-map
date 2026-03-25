@@ -209,10 +209,15 @@ export default function MapView() {
     (window as any).__SAVE_GRAPH = (g: { nodes: GraphNode[], edges: [number,number,number][] }) => {
       saveGraph(g)
     }
+    ;(window as any).__NAV_FLY = (coords: [number, number]) => {
+      setFlyTarget(coords)
+      setMyLocation(coords)
+    }
     return () => {
       delete (window as any).__FLY_TO
       delete (window as any).__SET_MY_LOCATION
       delete (window as any).__SAVE_GRAPH
+      delete (window as any).__NAV_FLY
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
