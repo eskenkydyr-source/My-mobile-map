@@ -42,6 +42,7 @@ function EditorTools() {
   const [showResetConfirm, setShowResetConfirm] = useState(false)
 
   // Сохранить граф в Firestore (коллекция "graph", документ "current")
+  // Firestore не поддерживает вложенные массивы — конвертируем edges в объекты
   const saveToCloud = async () => {
     const data = (window as any).__KALAMKAS_GRAPH
     if (!data) { setSaveError('Граф не загружен'); return }
@@ -52,7 +53,7 @@ function EditorTools() {
     try {
       await setDoc(doc(db, 'graph', 'current'), {
         nodes: data.nodes,
-        edges: data.edges,
+        edges: data.edges.map((e: [number, number, number]) => ({ from: e[0], to: e[1], dist: e[2] })),
         updatedAt: new Date().toISOString(),
       })
       setSaveStatus('ok')

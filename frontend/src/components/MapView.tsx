@@ -147,7 +147,11 @@ export default function MapView() {
       if (!snap.exists()) return
       const data = snap.data()
       if (!data?.nodes || !data?.edges) return
-      const updated = { nodes: data.nodes, edges: data.edges }
+      // Конвертируем объекты обратно в массивы [from, to, dist]
+      const edges = data.edges.map((e: any) =>
+        Array.isArray(e) ? e : [e.from, e.to, e.dist]
+      )
+      const updated = { nodes: data.nodes, edges }
       setEditGraph(updated)
       ;(window as any).__KALAMKAS_GRAPH = updated
       // Сохранить локально как кэш
