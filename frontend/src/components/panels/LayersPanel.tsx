@@ -4,6 +4,7 @@ import { doc, setDoc } from 'firebase/firestore'
 import { auth, db } from '../../firebase'
 import { useStore } from '../../store/useStore'
 import type { WellType } from '../../store/useStore'
+import { haversine } from '../../utils/distance'
 
 const SUBMODES = [
   { key: 'chain'   as const, icon: '⛓', label: 'Цепочка',     hint: 'Клик на пустое место = новый узел. Клик на существующий узел = продолжить цепочку оттуда' },
@@ -40,6 +41,8 @@ function EditorTools() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'ok' | 'err'>('idle')
   const [saveError, setSaveError] = useState('')
   const [showResetConfirm, setShowResetConfirm] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [importMsg, setImportMsg] = useState('')
 
   // Сохранить граф в Firestore (коллекция "graph", документ "current")
   // Firestore не поддерживает вложенные массивы — конвертируем edges в объекты
@@ -76,6 +79,75 @@ function EditorTools() {
     a.download = `graph_${new Date().toISOString().slice(0,10)}.json`
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  // Импорт дорог из OpenStreetMap через Overpass API
+  const importFromOSM = async () => {
+    setImporting(true)
+    setImportMsg('📡 Загружаю дороги из OpenStreetMap...')
+    try {
+      // Bounding box месторождения Қаламқас: (minlat, minlon, maxlat, maxlon)
+      const query = `[out:json][timeout:60];
+way["highway"](45.28,51.70,45.50,52.20);
+out geom;`
+      const resp = await fetch('https://overpass-api.de/api/interpreter', {
+        method: 'POST',
+        body: query,
+      })
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const data = await resp.json()
+
+      const current = (window as any).__KALAMKAS_GRAPH
+      if (!current) throw new Error('Граф не загружен')
+
+      const newNodes = [...current.nodes]
+      const newEdges: [number, number, number][] = [...current.edges]
+
+      // Порог слияния узлов ~10м (в градусах)
+      const THRESHOLD = 0.0001
+
+      const findOrAdd = (lat: number, lon: number): number => {
+        for (let i = 0; i < newNodes.length; i++) {
+          if (Math.abs(newNodes[i].lat - lat) < THRESHOLD && Math.abs(newNodes[i].lon - lon) < THRESHOLD)
+            return i
+        }
+        newNodes.push({ lat, lon, type: 'road' })
+        return newNodes.length - 1
+      }
+
+      let addedNodes = 0, addedEdges = 0
+
+      for (const way of data.elements) {
+        if (way.type !== 'way' || !way.geometry || way.geometry.length < 2) continue
+        let prevIdx: number | null = null
+        for (const pt of way.geometry) {
+          const lat = parseFloat(pt.lat.toFixed(6))
+          const lon = parseFloat(pt.lon.toFixed(6))
+          const prevLen = newNodes.length
+          const idx = findOrAdd(lat, lon)
+          if (newNodes.length > prevLen) addedNodes++
+          if (prevIdx !== null && prevIdx !== idx) {
+            const exists = newEdges.some(([f, t]) => (f === prevIdx && t === idx) || (f === idx && t === prevIdx))
+            if (!exists) {
+              const a = newNodes[prevIdx], b = newNodes[idx]
+              const dist = Math.round(haversine(a.lat, a.lon, b.lat, b.lon))
+              newEdges.push([prevIdx, idx, dist])
+              addedEdges++
+            }
+          }
+          prevIdx = idx
+        }
+      }
+
+      ;(window as any).__SAVE_GRAPH?.({ nodes: newNodes, edges: newEdges })
+      setImportMsg(`✅ Добавлено: ${addedNodes} узлов, ${addedEdges} рёбер из OSM`)
+      setTimeout(() => setImportMsg(''), 6000)
+    } catch (e: any) {
+      setImportMsg('❌ Ошибка: ' + e.message)
+      setTimeout(() => setImportMsg(''), 5000)
+    } finally {
+      setImporting(false)
+    }
   }
 
   const activeHint = SUBMODES.find(s => s.key === editSubmode)?.hint
@@ -154,6 +226,32 @@ function EditorTools() {
             ? `✅ Узел #${selectedNodeIdx} выбран — кликни ${editSubmode === 'move' ? 'на новое место' : 'на второй узел'}`
             : `👆 Кликни на узел (фиолетовый кружок)`
           }
+        </div>
+      )}
+
+      {/* Импорт дорог из OpenStreetMap */}
+      <button
+        onClick={importFromOSM}
+        disabled={importing}
+        style={{
+          width: '100%', padding: '10px', fontSize: 12, fontWeight: 600, minHeight: 44,
+          background: importing ? '#1c1917' : '#14532d',
+          color: importing ? '#78716c' : '#6ee7b7',
+          border: '1px solid ' + (importing ? '#44403c' : '#065f46'),
+          borderRadius: 6, cursor: importing ? 'wait' : 'pointer',
+          touchAction: 'manipulation',
+        }}
+      >
+        {importing ? '⏳ Загружаю из OSM...' : '🗺 Импорт дорог из OSM'}
+      </button>
+
+      {importMsg && (
+        <div style={{
+          background: importMsg.startsWith('✅') ? '#14532d' : importMsg.startsWith('❌') ? '#450a0a' : '#1e3a5f',
+          border: '1px solid ' + (importMsg.startsWith('✅') ? '#166534' : importMsg.startsWith('❌') ? '#7f1d1d' : '#1e40af'),
+          borderRadius: 6, padding: '8px 10px', fontSize: 11, color: importMsg.startsWith('✅') ? '#86efac' : importMsg.startsWith('❌') ? '#fca5a5' : '#93c5fd',
+        }}>
+          {importMsg}
         </div>
       )}
 

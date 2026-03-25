@@ -198,7 +198,7 @@ export default function MapView() {
     setSegmentStart(null)
   }, [editSubmode])
 
-  // __FLY_TO и __SET_MY_LOCATION — вызываются из App.tsx (кнопка 🎯)
+  // __FLY_TO, __SET_MY_LOCATION, __SAVE_GRAPH — вызываются из App.tsx и LayersPanel
   useEffect(() => {
     (window as any).__FLY_TO = (coords: [number, number], _zoom?: number) => {
       setFlyTarget(coords)
@@ -206,9 +206,13 @@ export default function MapView() {
     (window as any).__SET_MY_LOCATION = (coords: [number, number]) => {
       setMyLocation(coords)
     }
+    (window as any).__SAVE_GRAPH = (g: { nodes: GraphNode[], edges: [number,number,number][] }) => {
+      saveGraph(g)
+    }
     return () => {
       delete (window as any).__FLY_TO
       delete (window as any).__SET_MY_LOCATION
+      delete (window as any).__SAVE_GRAPH
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
