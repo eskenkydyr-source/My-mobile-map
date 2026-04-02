@@ -16,12 +16,12 @@ export default function Sidebar() {
     }}>
       {/* Заголовок */}
       <div style={{ padding: '14px 16px', borderBottom: '1px solid #1e293b' }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: '#38bdf8', letterSpacing: 1 }}>
+        <h1 style={{ fontSize: 13, fontWeight: 700, color: '#38bdf8', letterSpacing: 1, margin: 0 }}>
           ҚАЛАМҚАС
-        </div>
-        <div style={{ fontSize: 10, color: '#475569', marginTop: 2 }}>
+        </h1>
+        <p style={{ fontSize: 10, color: '#475569', marginTop: 2, margin: '2px 0 0' }}>
           Карта нефтяного месторождения
-        </div>
+        </p>
       </div>
 
       {/* Вкладки */}
