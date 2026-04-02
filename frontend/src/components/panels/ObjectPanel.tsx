@@ -8,8 +8,14 @@ export default function ObjectPanel() {
 
   if (!selectedObject) {
     return (
-      <div style={{ padding: 20, color: '#475569', fontSize: 13, textAlign: 'center' }}>
-        Выберите объект на карте
+      <div style={{ padding: '32px 20px', textAlign: 'center' }}>
+        <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.4 }}>📍</div>
+        <div style={{ color: '#94a3b8', fontSize: 14, fontWeight: 500, marginBottom: 6 }}>
+          Объект не выбран
+        </div>
+        <div style={{ color: '#475569', fontSize: 12, lineHeight: 1.5 }}>
+          Нажмите на скважину, БКНС или ГУ на карте, чтобы увидеть информацию
+        </div>
       </div>
     )
   }
