@@ -63,11 +63,11 @@ button:active {
     gap: 8px;
   }
 
-  /* Larger zoom buttons for fingers */
+  /* Larger zoom buttons for fingers — min 44px */
   .leaflet-control-zoom a {
-    width: 40px !important;
-    height: 40px !important;
-    line-height: 40px !important;
+    width: 44px !important;
+    height: 44px !important;
+    line-height: 44px !important;
     font-size: 20px !important;
   }
 
