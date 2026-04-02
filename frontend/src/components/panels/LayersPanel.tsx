@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth'
-import { doc, setDoc } from 'firebase/firestore'
-import { ref, uploadString } from 'firebase/storage'
+import { doc, setDoc, addDoc, collection, getDoc, deleteDoc, onSnapshot } from 'firebase/firestore'
+import { ref, uploadBytesResumable } from 'firebase/storage'
 import { auth, db, storage } from '../../firebase'
 import { useStore } from '../../store/useStore'
 import type { WellType } from '../../store/useStore'
@@ -36,55 +36,169 @@ const btnStyle = (active: boolean, colors: { active: string; border: string }): 
 })
 
 function EditorTools() {
-  const { editSubmode, setEditSubmode, selectedNodeIdx, segmentStep, setSegmentStep } = useStore()
+  const { editSubmode, setEditSubmode, selectedNodeIdx, segmentStep, setSegmentStep, editGraph, saveGraph: storeSaveGraph, resetGraph } = useStore()
 
   const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'ok' | 'err'>('idle')
   const [saveError, setSaveError] = useState('')
+  const [uploadProgress, setUploadProgress] = useState(0)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [importing, setImporting] = useState(false)
   const [importMsg, setImportMsg] = useState('')
 
-  // Сохранить граф в Firebase Storage (JSON файл до 5ГБ)
-  // В Firestore хранятся только метаданные (дата, кол-во узлов)
-  const saveToCloud = async () => {
-    const data = (window as any).__KALAMKAS_GRAPH
-    if (!data) { setSaveError('Граф не загружен'); return }
+  // Последний редактор — из метаданных графа
+  const [lastEditor, setLastEditor] = useState<{ email: string; date: string } | null>(null)
+
+  // Edit lock — кто сейчас редактирует
+  const [lockOwner, setLockOwner] = useState<string | null>(null)
+  const [lockConflict, setLockConflict] = useState(false)
+  const lockConflictRef = useRef(false)
+
+  // Слушаем метаданные графа — кто последний сохранял
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'graph', 'current'), (snap) => {
+      if (!snap.exists()) return
+      const d = snap.data()
+      if (d.updatedBy) setLastEditor({ email: d.updatedBy, date: d.updatedAt || '' })
+    })
+    return unsub
+  }, [])
+
+  // Edit lock: захват при монтировании, освобождение при размонтировании
+  useEffect(() => {
+    const user = auth.currentUser
+    if (!user) return
+
+    const lockRef = doc(db, 'edit_lock', 'current')
+
+    // Пробуем захватить блокировку
+    const acquire = async () => {
+      const snap = await getDoc(lockRef)
+      if (snap.exists()) {
+        const data = snap.data()
+        const lockAge = Date.now() - new Date(data.lockedAt).getTime()
+        // Блокировка старше 10 минут — считаем устаревшей
+        if (data.lockedBy !== user.email && lockAge < 10 * 60 * 1000) {
+          setLockOwner(data.lockedBy)
+          setLockConflict(true)
+          lockConflictRef.current = true
+          return
+        }
+      }
+      await setDoc(lockRef, {
+        lockedBy: user.email,
+        lockedAt: new Date().toISOString(),
+      })
+      setLockOwner(user.email!)
+      setLockConflict(false)
+      lockConflictRef.current = false
+    }
+
+    acquire()
+
+    // Обновляем блокировку каждые 2 минуты (heartbeat)
+    const heartbeat = setInterval(async () => {
+      if (!lockConflictRef.current) {
+        await setDoc(lockRef, {
+          lockedBy: user.email,
+          lockedAt: new Date().toISOString(),
+        }).catch(() => {})
+      }
+    }, 2 * 60 * 1000)
+
+    // Освобождаем при выходе из редактора (только если мы владеем lock)
+    return () => {
+      clearInterval(heartbeat)
+      if (!lockConflictRef.current) {
+        deleteDoc(lockRef).catch(() => {})
+      }
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Сохранить граф в Firebase Storage + метаданные + история
+  const saveToCloud = () => {
+    if (!editGraph) { setSaveError('Граф не загружен'); return }
+
+    const user = auth.currentUser
+    const userEmail = user?.email || 'unknown'
+
+    const payload = {
+      nodes: editGraph.nodes,
+      edges: editGraph.edges.map((e: [number, number, number]) => ({ from: e[0], to: e[1], dist: e[2] })),
+    }
+
+    // Офлайн — сохраняем в очередь синхронизации
+    if (!navigator.onLine) {
+      import('../../utils/idb').then(({ enqueueSync }) => {
+        enqueueSync({
+          type: 'graph_save',
+          payload: { data: payload, email: userEmail, nodeCount: editGraph.nodes.length, edgeCount: editGraph.edges.length },
+          createdAt: new Date().toISOString(),
+        })
+      })
+      setSaveStatus('ok')
+      setSaveError('')
+      setTimeout(() => setSaveStatus('idle'), 2000)
+      return
+    }
 
     setSaving(true)
     setSaveStatus('idle')
     setSaveError('')
-    try {
-      // Конвертируем edges в объекты (для совместимости)
-      const payload = {
-        nodes: data.nodes,
-        edges: data.edges.map((e: [number, number, number]) => ({ from: e[0], to: e[1], dist: e[2] })),
+    setUploadProgress(0)
+
+    const jsonBytes = new TextEncoder().encode(JSON.stringify(payload))
+    const blob = new Blob([jsonBytes], { type: 'application/json' })
+
+    const graphRef = ref(storage, 'graph/current.json')
+    const task = uploadBytesResumable(graphRef, blob, { contentType: 'application/json' })
+
+    task.on('state_changed',
+      (snap) => {
+        const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100)
+        setUploadProgress(pct)
+      },
+      (err) => {
+        setSaveError('Ошибка загрузки: ' + err.message)
+        setSaveStatus('err')
+        setSaving(false)
+      },
+      async () => {
+        try {
+          const now = new Date().toISOString()
+
+          // Метаданные графа + кто сохранил
+          await setDoc(doc(db, 'graph', 'current'), {
+            updatedAt: now,
+            updatedBy: userEmail,
+            nodeCount: editGraph.nodes.length,
+            edgeCount: editGraph.edges.length,
+          })
+
+          // Запись в историю правок
+          await addDoc(collection(db, 'graph_history'), {
+            savedAt: now,
+            savedBy: userEmail,
+            nodeCount: editGraph.nodes.length,
+            edgeCount: editGraph.edges.length,
+          })
+
+          setSaveStatus('ok')
+          setUploadProgress(100)
+          setTimeout(() => { setSaveStatus('idle'); setUploadProgress(0) }, 3000)
+        } catch (e: any) {
+          setSaveError('Ошибка метаданных: ' + e.message)
+          setSaveStatus('err')
+        } finally {
+          setSaving(false)
+        }
       }
-      // Загружаем JSON в Firebase Storage
-      const graphRef = ref(storage, 'graph/current.json')
-      await uploadString(graphRef, JSON.stringify(payload), 'raw', {
-        contentType: 'application/json',
-      })
-      // Записываем метаданные в Firestore (маленький документ)
-      await setDoc(doc(db, 'graph', 'current'), {
-        updatedAt: new Date().toISOString(),
-        nodeCount: data.nodes.length,
-        edgeCount: data.edges.length,
-      })
-      setSaveStatus('ok')
-      setTimeout(() => setSaveStatus('idle'), 3000)
-    } catch (e: any) {
-      setSaveError('Ошибка: ' + e.message)
-      setSaveStatus('err')
-    } finally {
-      setSaving(false)
-    }
+    )
   }
 
   const exportGraph = () => {
-    const data = (window as any).__KALAMKAS_GRAPH
-    if (!data) { setSaveError('Граф не загружен'); return }
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    if (!editGraph) { setSaveError('Граф не загружен'); return }
+    const blob = new Blob([JSON.stringify(editGraph, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -93,9 +207,9 @@ function EditorTools() {
     URL.revokeObjectURL(url)
   }
 
-  // Очистить весь граф (без перезагрузки страницы)
+  // Сбросить граф к исходному (из файлов), очистить IndexedDB и localStorage
   const clearGraph = () => {
-    ;(window as any).__SAVE_GRAPH?.({ nodes: [], edges: [] })
+    resetGraph()
   }
 
   // Импорт дорог из OpenStreetMap — узел каждые 25м вдоль каждой дороги
@@ -188,7 +302,7 @@ out geom;`
         }
       }
 
-      ;(window as any).__SAVE_GRAPH?.({ nodes, edges })
+      storeSaveGraph({ nodes, edges })
       setImportMsg(`✅ Готово: ${nodes.length} узлов, ${edges.length} рёбер (${wayCount} дорог OSM)`)
       setTimeout(() => setImportMsg(''), 8000)
     } catch (e: any) {
@@ -204,6 +318,23 @@ out geom;`
 
   return (
     <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {/* Конфликт блокировки */}
+      {lockConflict && (
+        <div style={{
+          background: '#451a03', border: '1px solid #92400e',
+          borderRadius: 6, padding: '8px 10px', fontSize: 12, color: '#fbbf24',
+        }}>
+          {lockOwner} сейчас редактирует граф. Подождите или ваши изменения могут перезаписать чужие.
+        </div>
+      )}
+
+      {/* Последний редактор */}
+      {lastEditor && (
+        <div style={{ fontSize: 11, color: '#64748b', padding: '4px 0' }}>
+          Сохранил: {lastEditor.email} ({new Date(lastEditor.date).toLocaleString('ru')})
+        </div>
+      )}
+
       <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: 1 }}>
         Инструменты
       </div>
@@ -340,9 +471,26 @@ out geom;`
           border: '1px solid ' + (saveStatus === 'ok' ? '#166534' : '#2563eb'),
           borderRadius: 6, cursor: saving ? 'wait' : 'pointer',
           transition: 'all 0.2s', touchAction: 'manipulation',
+          position: 'relative', overflow: 'hidden',
         }}
       >
-        {saving ? '⏳ Сохраняю...' : saveStatus === 'ok' ? '✅ Сохранено в Firebase' : '☁️ Сохранить на все устройства'}
+        {saving && uploadProgress > 0 && (
+          <div style={{
+            position: 'absolute', left: 0, top: 0, bottom: 0,
+            width: `${uploadProgress}%`,
+            background: 'rgba(255,255,255,0.15)',
+            transition: 'width 0.3s',
+          }} />
+        )}
+        <span style={{ position: 'relative' }}>
+          {saving
+            ? uploadProgress > 0
+              ? `⏳ Загружаю... ${uploadProgress}%`
+              : '⏳ Подготовка...'
+            : saveStatus === 'ok'
+              ? '✅ Сохранено в Firebase'
+              : '☁️ Сохранить на все устройства'}
+        </span>
       </button>
 
       <div style={{ display: 'flex', gap: 4 }}>
@@ -373,7 +521,7 @@ out geom;`
         ) : (
           <div style={{ flex: 1, display: 'flex', gap: 4 }}>
             <button
-              onClick={() => { localStorage.removeItem('kalamkas_graph'); window.location.reload() }}
+              onClick={() => { resetGraph(); window.location.reload() }}
               style={{
                 flex: 1, padding: '10px', fontSize: 12, minHeight: 44,
                 background: '#dc2626', color: '#fff',
@@ -397,6 +545,92 @@ out geom;`
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// Предзагрузка тайлов для офлайна
+function TileDownloader() {
+  const [downloading, setDownloading] = useState(false)
+  const [progress, setProgress] = useState({ done: 0, total: 0 })
+  const [status, setStatus] = useState<'idle' | 'done' | 'err'>('idle')
+
+  // Bbox месторождения Қаламқас
+  const BOUNDS = { minLat: 45.30, maxLat: 45.45, minLon: 51.78, maxLon: 52.10 }
+  const ZOOM_MIN = 10
+  const ZOOM_MAX = 15
+
+  const lat2tile = (lat: number, z: number) => Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * (1 << z))
+  const lon2tile = (lon: number, z: number) => Math.floor((lon + 180) / 360 * (1 << z))
+
+  const download = async () => {
+    setDownloading(true)
+    setStatus('idle')
+
+    // Считаем количество тайлов
+    const urls: string[] = []
+    for (let z = ZOOM_MIN; z <= ZOOM_MAX; z++) {
+      const x1 = lon2tile(BOUNDS.minLon, z)
+      const x2 = lon2tile(BOUNDS.maxLon, z)
+      const y1 = lat2tile(BOUNDS.maxLat, z)
+      const y2 = lat2tile(BOUNDS.minLat, z)
+      for (let x = x1; x <= x2; x++) {
+        for (let y = y1; y <= y2; y++) {
+          const s = ['a', 'b', 'c'][Math.abs(x + y) % 3]
+          urls.push(`https://${s}.tile.openstreetmap.org/${z}/${x}/${y}.png`)
+        }
+      }
+    }
+
+    setProgress({ done: 0, total: urls.length })
+
+    // Загружаем батчами по 6 (чтобы не перегрузить браузер)
+    let done = 0
+    const BATCH = 6
+    try {
+      for (let i = 0; i < urls.length; i += BATCH) {
+        const batch = urls.slice(i, i + BATCH)
+        await Promise.all(batch.map(u => fetch(u).catch(() => null)))
+        done += batch.length
+        setProgress({ done, total: urls.length })
+      }
+      setStatus('done')
+      setTimeout(() => setStatus('idle'), 5000)
+    } catch {
+      setStatus('err')
+    } finally {
+      setDownloading(false)
+    }
+  }
+
+  return (
+    <div style={{ paddingTop: 8, borderTop: '1px solid #1e293b' }}>
+      <button
+        onClick={download}
+        disabled={downloading}
+        style={{
+          width: '100%', padding: '10px', fontSize: 12, minHeight: 44,
+          background: downloading ? '#1e3a5f' : status === 'done' ? '#065f46' : '#1e293b',
+          color: status === 'done' ? '#34d399' : '#94a3b8',
+          border: '1px solid #334155', borderRadius: 6,
+          cursor: downloading ? 'wait' : 'pointer', touchAction: 'manipulation',
+        }}
+      >
+        {downloading
+          ? `📥 Загрузка тайлов: ${progress.done}/${progress.total}`
+          : status === 'done'
+            ? '✅ Карта сохранена для офлайна'
+            : '📥 Скачать карту для офлайна'}
+      </button>
+      {downloading && (
+        <div style={{ marginTop: 4, height: 4, background: '#1e293b', borderRadius: 2 }}>
+          <div style={{
+            height: '100%', borderRadius: 2, background: '#3b82f6',
+            width: `${progress.total ? (progress.done / progress.total * 100) : 0}%`,
+            transition: 'width 0.3s',
+          }} />
+        </div>
+      )}
     </div>
   )
 }
@@ -523,86 +757,91 @@ export default function LayersPanel() {
         </div>
       )}
 
-      {/* Редактор */}
-      <div style={{ paddingTop: 8, borderTop: '1px solid #1e293b' }}>
-        <button
-          onClick={handleEditMode}
-          style={{
-            width: '100%', padding: '10px', fontSize: 12, minHeight: 44,
-            background: editMode ? '#7c3aed' : '#1e293b',
-            color: editMode ? '#fff' : '#94a3b8',
-            border: '1px solid ' + (editMode ? '#7c3aed' : '#334155'),
-            borderRadius: 6, cursor: 'pointer', touchAction: 'manipulation',
-          }}
-        >
-          {editMode ? '✏️ Редактор: ВКЛ' : '🔒 Редактор графа'}
-        </button>
+      {/* Офлайн-загрузка тайлов */}
+      <TileDownloader />
 
-        {/* Firebase Auth: форма входа */}
-        {showLoginInput && (
-          <div style={{
-            marginTop: 8, background: '#1e293b', border: '1px solid #334155',
-            borderRadius: 8, padding: 12,
-            display: 'flex', flexDirection: 'column', gap: 8
-          }}>
-            <div style={{ fontSize: 12, color: '#94a3b8' }}>Вход в редактор графа:</div>
-            <input
-              type="email"
-              value={loginEmail}
-              onChange={e => setLoginEmail(e.target.value)}
-              placeholder="Email"
-              autoFocus
-              style={{
-                padding: '10px 8px', fontSize: 16,
-                background: '#0f172a', color: '#e2e8f0',
-                border: '1px solid #334155', borderRadius: 6, outline: 'none',
-              }}
-            />
-            <input
-              type="password"
-              value={loginPassword}
-              onChange={e => setLoginPassword(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleLoginSubmit()}
-              placeholder="Пароль"
-              style={{
-                padding: '10px 8px', fontSize: 16,
-                background: '#0f172a', color: '#e2e8f0',
-                border: '1px solid ' + (loginError ? '#ef4444' : '#334155'),
-                borderRadius: 6, outline: 'none',
-              }}
-            />
-            {loginError && (
-              <div style={{ fontSize: 12, color: '#ef4444' }}>❌ {loginError}</div>
-            )}
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button
-                onClick={handleLoginSubmit}
-                disabled={loginLoading}
+      {/* Редактор — только веб-версия */}
+      {!__IS_MOBILE__ && (
+        <div style={{ paddingTop: 8, borderTop: '1px solid #1e293b' }}>
+          <button
+            onClick={handleEditMode}
+            style={{
+              width: '100%', padding: '10px', fontSize: 12, minHeight: 44,
+              background: editMode ? '#7c3aed' : '#1e293b',
+              color: editMode ? '#fff' : '#94a3b8',
+              border: '1px solid ' + (editMode ? '#7c3aed' : '#334155'),
+              borderRadius: 6, cursor: 'pointer', touchAction: 'manipulation',
+            }}
+          >
+            {editMode ? '✏️ Редактор: ВКЛ' : '🔒 Редактор графа'}
+          </button>
+
+          {/* Firebase Auth: форма входа */}
+          {showLoginInput && (
+            <div style={{
+              marginTop: 8, background: '#1e293b', border: '1px solid #334155',
+              borderRadius: 8, padding: 12,
+              display: 'flex', flexDirection: 'column', gap: 8
+            }}>
+              <div style={{ fontSize: 12, color: '#94a3b8' }}>Вход в редактор графа:</div>
+              <input
+                type="email"
+                value={loginEmail}
+                onChange={e => setLoginEmail(e.target.value)}
+                placeholder="Email"
+                autoFocus
                 style={{
-                  flex: 1, padding: '10px', fontSize: 13, fontWeight: 600, minHeight: 44,
-                  background: loginLoading ? '#1e3a5f' : '#1d4ed8', color: '#fff',
-                  border: 'none', borderRadius: 6,
-                  cursor: loginLoading ? 'wait' : 'pointer', touchAction: 'manipulation',
+                  padding: '10px 8px', fontSize: 16,
+                  background: '#0f172a', color: '#e2e8f0',
+                  border: '1px solid #334155', borderRadius: 6, outline: 'none',
                 }}
-              >
-                {loginLoading ? '⏳ Вход...' : 'Войти'}
-              </button>
-              <button
-                onClick={() => { setShowLoginInput(false); setLoginEmail(''); setLoginPassword(''); setLoginError('') }}
+              />
+              <input
+                type="password"
+                value={loginPassword}
+                onChange={e => setLoginPassword(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleLoginSubmit()}
+                placeholder="Пароль"
                 style={{
-                  padding: '10px 14px', fontSize: 13, minHeight: 44,
-                  background: '#1e293b', color: '#94a3b8',
-                  border: '1px solid #334155', borderRadius: 6, cursor: 'pointer', touchAction: 'manipulation',
+                  padding: '10px 8px', fontSize: 16,
+                  background: '#0f172a', color: '#e2e8f0',
+                  border: '1px solid ' + (loginError ? '#ef4444' : '#334155'),
+                  borderRadius: 6, outline: 'none',
                 }}
-              >
-                Отмена
-              </button>
+              />
+              {loginError && (
+                <div style={{ fontSize: 12, color: '#ef4444' }}>❌ {loginError}</div>
+              )}
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button
+                  onClick={handleLoginSubmit}
+                  disabled={loginLoading}
+                  style={{
+                    flex: 1, padding: '10px', fontSize: 13, fontWeight: 600, minHeight: 44,
+                    background: loginLoading ? '#1e3a5f' : '#1d4ed8', color: '#fff',
+                    border: 'none', borderRadius: 6,
+                    cursor: loginLoading ? 'wait' : 'pointer', touchAction: 'manipulation',
+                  }}
+                >
+                  {loginLoading ? '⏳ Вход...' : 'Войти'}
+                </button>
+                <button
+                  onClick={() => { setShowLoginInput(false); setLoginEmail(''); setLoginPassword(''); setLoginError('') }}
+                  style={{
+                    padding: '10px 14px', fontSize: 13, minHeight: 44,
+                    background: '#1e293b', color: '#94a3b8',
+                    border: '1px solid #334155', borderRadius: 6, cursor: 'pointer', touchAction: 'manipulation',
+                  }}
+                >
+                  Отмена
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {editMode && <EditorTools />}
-      </div>
+          {editMode && <EditorTools />}
+        </div>
+      )}
     </div>
   )
 }

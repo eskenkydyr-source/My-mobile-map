@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Метаданные графа — читать все, писать только авторизованные
+    match /graph/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // История правок — читать все, писать только авторизованные
+    match /graph_history/{docId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      // Историю нельзя удалять или редактировать
+      allow update, delete: if false;
+    }
+
+    // Блокировка редактирования — читать все, писать только авторизованные
+    match /edit_lock/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Всё остальное — запрещено
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

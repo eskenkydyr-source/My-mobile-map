@@ -36,7 +36,7 @@ def grid_edges():
     dist = 400  # ~400м
     for a, b in pairs:
         edges.append(Edge(a, b, dist))
-        edges.append(Edge(b, a, dist))
+        # build_adj теперь двунаправленный — обратное ребро добавляется автоматически
     return edges
 
 
@@ -87,8 +87,8 @@ class TestNearestNode:
         assert idx is None
 
     def test_respects_max_dist(self, grid_nodes):
-        # Узел 0 находится на ~400м от узла 1
-        idx = nearest_node(45.370, 51.925, grid_nodes, max_dist_m=100)
+        # Точка далеко от всех узлов — дальше max_dist
+        idx = nearest_node(45.360, 51.910, grid_nodes, max_dist_m=100)
         assert idx is None  # слишком далеко от любого узла
 
 

@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:firebase": "FIREBASE=true tsc -b && FIREBASE=true vite build",
     "build:mobile": "CAPACITOR=true tsc -b && CAPACITOR=true vite build && npx cap sync android",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -38,6 +39,7 @@
     "globals": "^16.5.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.0",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "vite-plugin-pwa": "^1.2.0"
   }
 }

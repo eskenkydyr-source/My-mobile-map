@@ -6,7 +6,7 @@
 }
 
 body {
-  font-family: 'Segoe UI', sans-serif;
+  font-family: -apple-system, 'SF Pro Text', 'Segoe UI', sans-serif;
   background: #0f172a;
   overscroll-behavior: none;
 }
@@ -24,18 +24,18 @@ body {
   z-index: 1000;
 }
 
-/* FAB кнопки — safe area для iPhone/Android */
+/* FAB buttons — safe area */
 .fab-container {
   position: fixed;
   bottom: calc(20px + env(safe-area-inset-bottom));
-  right: calc(20px + env(safe-area-inset-right));
+  right: calc(16px + env(safe-area-inset-right));
   display: flex;
   flex-direction: column;
   gap: 10px;
   z-index: 999;
 }
 
-/* Визуальный feedback при нажатии */
+/* Touch feedback */
 button {
   touch-action: manipulation;
 }
@@ -44,37 +44,55 @@ button:active {
   transform: scale(0.96);
 }
 
-/* Листфлет — кнопки зума */
+/* Leaflet zoom buttons */
 .leaflet-control-zoom-in,
 .leaflet-control-zoom-out {
   touch-action: manipulation;
 }
 
-/* ===== МОБИЛЬНЫЙ (до 768px) ===== */
+/* ===== MOBILE (<=768px) ===== */
 @media (max-width: 768px) {
-  /* Скрыть десктопный сайдбар */
   .sidebar-wrap {
     display: none !important;
   }
 
-  /* FAB выше bottom sheet (peek ~12vh) */
+  /* FAB above bottom sheet peek (~12vh) */
   .fab-container {
-    bottom: calc(13vh + 12px + env(safe-area-inset-bottom));
+    bottom: calc(13vh + 10px + env(safe-area-inset-bottom));
+    right: calc(12px + env(safe-area-inset-right));
+    gap: 8px;
   }
 
-  /* Кнопки зума крупнее */
+  /* Larger zoom buttons for fingers */
   .leaflet-control-zoom a {
     width: 40px !important;
     height: 40px !important;
     line-height: 40px !important;
     font-size: 20px !important;
   }
+
+  /* Move zoom control left to not overlap FABs */
+  .leaflet-right .leaflet-control {
+    margin-right: 8px;
+  }
 }
 
-/* ===== ДЕСКТОП (от 769px) ===== */
+/* ===== Very small screens (<=380px) ===== */
+@media (max-width: 380px) {
+  .fab-container {
+    gap: 6px;
+  }
+}
+
+/* ===== DESKTOP (>=769px) ===== */
 @media (min-width: 769px) {
-  /* Скрыть мобильный bottom sheet */
   .bottom-sheet-wrap {
     display: none !important;
   }
+}
+
+/* Pulse animation for reroute indicator */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }

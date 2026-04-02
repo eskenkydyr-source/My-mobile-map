@@ -19,7 +19,7 @@ export default function BottomSheet() {
   // Автоматически открыть когда выбран объект
   useEffect(() => {
     if (selectedObject && snap === 'peek') setSnap('half')
-  }, [selectedObject])
+  }, [selectedObject]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const heightVal = `calc(${SNAP_VALUES[snap] * 100}vh - ${dragging ? dragDy : 0}px)`
 
@@ -43,7 +43,7 @@ export default function BottomSheet() {
     else if (dragDy > threshold) setSnap(SNAPS[Math.max(idx - 1, 0)])
     else setSnap(startSnap.current)
     setDragDy(0)
-  }, [dragging, dragDy])
+  }, [dragging, dragDy]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const tabs = [
     { key: 'layers' as const, icon: '🗂', label: 'Слои' },
@@ -60,8 +60,8 @@ export default function BottomSheet() {
         height: heightVal,
         minHeight: 60,
         background: '#0f172a',
-        borderRadius: '20px 20px 0 0',
-        boxShadow: '0 -4px 24px rgba(0,0,0,0.6)',
+        borderRadius: '16px 16px 0 0',
+        boxShadow: '0 -2px 20px rgba(0,0,0,0.6)',
         zIndex: 1000,
         display: 'flex',
         flexDirection: 'column',
@@ -69,56 +69,77 @@ export default function BottomSheet() {
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}
     >
-      {/* Ручка для перетаскивания + вкладки */}
+      {/* Drag handle + tabs — always visible */}
       <div
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
         style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center',
-          padding: '8px 0 0', flexShrink: 0,
+          padding: '6px 0 0', flexShrink: 0,
           touchAction: 'none', userSelect: 'none', cursor: 'grab',
         }}
       >
-        {/* Визуальная ручка */}
+        {/* Handle pill */}
         <div style={{
-          width: 36, height: 4, borderRadius: 2,
-          background: '#334155', marginBottom: 6,
+          width: 32, height: 4, borderRadius: 2,
+          background: '#475569', marginBottom: 6,
         }} />
 
-        {/* Вкладки */}
+        {/* Tabs — visible even in peek */}
         <div style={{ display: 'flex', width: '100%', borderBottom: '1px solid #1e293b' }}>
-          {tabs.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => {
-                setActiveTab(tab.key)
-                if (snap === 'peek') setSnap('half')
-              }}
-              style={{
-                flex: 1,
-                padding: '10px 4px',
-                minHeight: 44,
-                fontSize: 12,
-                fontWeight: activeTab === tab.key ? 700 : 400,
-                background: 'transparent',
-                color: activeTab === tab.key ? '#38bdf8' : '#475569',
-                border: 'none',
-                borderBottom: activeTab === tab.key ? '2px solid #38bdf8' : '2px solid transparent',
-                cursor: 'pointer',
-                touchAction: 'manipulation',
-              }}
-            >
-              <div style={{ fontSize: 16 }}>{tab.icon}</div>
-              <div>{tab.label}</div>
-            </button>
-          ))}
+          {tabs.map(tab => {
+            const isActive = activeTab === tab.key
+            return (
+              <button
+                key={tab.key}
+                onClick={() => {
+                  setActiveTab(tab.key)
+                  if (snap === 'peek') setSnap('half')
+                }}
+                style={{
+                  flex: 1,
+                  padding: '8px 4px 10px',
+                  minHeight: 44,
+                  fontSize: 11,
+                  fontWeight: isActive ? 700 : 400,
+                  background: 'transparent',
+                  color: isActive ? '#38bdf8' : '#64748b',
+                  border: 'none',
+                  borderBottom: isActive ? '2px solid #38bdf8' : '2px solid transparent',
+                  cursor: 'pointer',
+                  touchAction: 'manipulation',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 2,
+                }}
+              >
+                <span style={{ fontSize: 16 }}>{tab.icon}</span>
+                <span>{tab.label}</span>
+              </button>
+            )
+          })}
         </div>
       </div>
 
-      {/* Контент — только когда не peek */}
+      {/* Swipe-up hint in peek state */}
+      {snap === 'peek' && (
+        <div
+          onClick={() => setSnap('half')}
+          style={{
+            padding: '6px 0 2px',
+            textAlign: 'center', fontSize: 11, color: '#475569',
+            cursor: 'pointer',
+          }}
+        >
+          ↑ Потяните вверх
+        </div>
+      )}
+
+      {/* Content */}
       {snap !== 'peek' && (
-        <div style={{ flex: 1, overflowY: 'auto' }}>
+        <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
           {activeTab === 'layers' && <LayersPanel />}
           {activeTab === 'route'  && <RoutePanel />}
           {activeTab === 'object' && <ObjectPanel />}

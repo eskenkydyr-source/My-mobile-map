@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useStore } from '../../store/useStore'
 
 export default function ObjectPanel() {
-  const { selectedObject, setFrom, setTo, setActiveTab } = useStore()
+  const { selectedObject, setFrom, setTo, setActiveTab, setFlyTarget, setMyLocation, buildRoute } = useStore()
   const [routing, setRouting] = useState(false)
   const [locError, setLocError] = useState('')
 
@@ -23,12 +23,12 @@ export default function ObjectPanel() {
   }
 
   const applyMyLocation = (myLat: number, myLon: number) => {
-    ;(window as any).__FLY_TO?.([myLat, myLon])
-    ;(window as any).__SET_MY_LOCATION?.([myLat, myLon])
+    setFlyTarget([myLat, myLon])
+    setMyLocation([myLat, myLon])
     setFrom({ lat: myLat, lon: myLon, name: 'Моё местоположение' })
     setTo({ lat, lon, name })
     setTimeout(() => {
-      ;(window as any).__BUILD_ROUTE?.()
+      buildRoute()
       setActiveTab('route')
     }, 150)
     setRouting(false)

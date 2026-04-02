@@ -4,15 +4,15 @@ import { searchObjects } from '../../utils/search'
 import type { SearchResult } from '../../utils/search'
 
 export default function RoutePanel() {
-  const { from, to, setFrom, setTo, routeSelectMode, setRouteSelectMode, routePath, routeInfo, setRoutePath, setRouteInfo } = useStore()
+  const { from, to, setFrom, setTo, routeSelectMode, setRouteSelectMode, routePath, routeInfo, setRoutePath, setRouteInfo, buildRoute } = useStore()
   const [searchQuery, setSearchQuery] = useState({ from: '', to: '' })
   const [searchResults, setSearchResults] = useState<{ from: SearchResult[]; to: SearchResult[] }>({ from: [], to: [] })
   const [activeSearch, setActiveSearch] = useState<'from' | 'to' | null>(null)
   const [locError, setLocError] = useState('')
 
-  const wells = (window as any).__KALAMKAS_DATA?.wells
-  const bkns  = (window as any).__KALAMKAS_DATA?.bkns
-  const gu    = (window as any).__KALAMKAS_DATA?.gu
+  const wells = useStore(s => s.wells)
+  const bkns  = useStore(s => s.bkns)
+  const gu    = useStore(s => s.gu)
 
   const handleSearch = (which: 'from' | 'to', q: string) => {
     setSearchQuery(prev => ({ ...prev, [which]: q }))
@@ -163,7 +163,7 @@ export default function RoutePanel() {
       <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
         <button
           disabled={!from || !to}
-          onClick={() => (window as any).__BUILD_ROUTE?.()}
+          onClick={buildRoute}
           style={{
             flex: 1, padding: '12px', fontSize: 14, fontWeight: 600, minHeight: 48,
             background: from && to ? '#1d4ed8' : '#1e293b',

@@ -41,10 +41,11 @@ def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 
 def build_adj(nodes: List[Node], edges: List[Edge]) -> dict:
-    """Строит список смежности из рёбер графа."""
+    """Строит список смежности из рёбер графа (двунаправленный — дороги без одностороннего движения)."""
     adj: dict = {n.idx: [] for n in nodes}
     for e in edges:
         adj[e.from_idx].append((e.to_idx, e.distance_m))
+        adj[e.to_idx].append((e.from_idx, e.distance_m))
     return adj
 
 

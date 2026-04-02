@@ -60,7 +60,7 @@ interface Props {
 }
 
 export default function NavigationPanel({ gpsPos, gpsSpeed, gpsHeading }: Props) {
-  const { routePath, to, setNavActive } = useStore()
+  const { routePath, to, setNavActive, rerouting } = useStore()
   const watchRef = useRef<number | null>(null)
 
   // Сброс при размонтировании
@@ -100,24 +100,36 @@ export default function NavigationPanel({ gpsPos, gpsSpeed, gpsHeading }: Props)
 
   return (
     <div style={panelStyle}>
-      {/* Направление */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+      {/* Индикатор пересчёта маршрута */}
+      {rerouting && (
         <div style={{
-          width: 72, height: 72, borderRadius: '50%',
+          background: '#1e3a5f', border: '1px solid #2563eb',
+          borderRadius: 8, padding: '8px 12px', marginBottom: 10,
+          fontSize: 13, color: '#93c5fd', textAlign: 'center',
+          animation: 'pulse 1s infinite',
+        }}>
+          🔄 Пересчёт маршрута...
+        </div>
+      )}
+
+      {/* Направление */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{
+          width: 56, height: 56, borderRadius: '50%',
           background: '#1d4ed8', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 36, flexShrink: 0, boxShadow: '0 2px 12px rgba(29,78,216,0.5)',
+          fontSize: 28, flexShrink: 0, boxShadow: '0 2px 12px rgba(29,78,216,0.5)',
         }}>
           {dir.arrow}
         </div>
-        <div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9' }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontSize: 20, fontWeight: 700, color: '#f1f5f9' }}>
             {dir.text}
           </div>
-          <div style={{ fontSize: 14, color: '#94a3b8', marginTop: 2 }}>
+          <div style={{ fontSize: 13, color: '#94a3b8', marginTop: 2 }}>
             до цели: <span style={{ color: '#38bdf8', fontWeight: 600 }}>{formatDist(remaining)}</span>
           </div>
           {to && (
-            <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+            <div style={{ fontSize: 11, color: '#64748b', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               📍 {to.name}
             </div>
           )}
@@ -148,14 +160,14 @@ export default function NavigationPanel({ gpsPos, gpsSpeed, gpsHeading }: Props)
 
 const panelStyle: React.CSSProperties = {
   position: 'absolute',
-  bottom: 80,
+  bottom: 'calc(16px + env(safe-area-inset-bottom))',
   left: '50%',
   transform: 'translateX(-50%)',
-  width: 'min(380px, calc(100vw - 24px))',
+  width: 'min(380px, calc(100vw - 16px))',
   background: '#0f172a',
   border: '1px solid #1e3a5f',
   borderRadius: 16,
-  padding: '16px 20px',
+  padding: '14px 16px',
   zIndex: 1000,
   boxShadow: '0 8px 32px rgba(0,0,0,0.7)',
 }

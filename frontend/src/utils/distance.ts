@@ -8,7 +8,8 @@ export function haversine(lat1: number, lon1: number, lat2: number, lon2: number
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
 }
 
-export interface GraphNode { lat: number; lon: number; type: string }
+import type { GraphNode } from '../store/useStore'
+export type { GraphNode }
 
 export function nearestNode(lat: number, lon: number, nodes: GraphNode[], maxDist = 5000): number | null {
   let bestIdx: number | null = null

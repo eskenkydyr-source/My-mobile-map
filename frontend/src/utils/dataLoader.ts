@@ -97,7 +97,7 @@ export async function loadAllData(localBase: string): Promise<LoadedData> {
 
     return {
       wells: rWells,
-      bkns: rBkns || rGu, // fallback
+      bkns: rBkns,
       gu: rGu,
       graph: rGraph,
       source: 'remote',
