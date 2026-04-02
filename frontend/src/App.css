@@ -75,6 +75,12 @@ button:active {
   .leaflet-right .leaflet-control {
     margin-right: 8px;
   }
+
+  /* Keep attribution clear of FABs */
+  .leaflet-bottom.leaflet-right {
+    margin-bottom: 0;
+    margin-right: 60px;
+  }
 }
 
 /* ===== Very small screens (<=380px) ===== */
