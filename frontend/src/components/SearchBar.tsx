@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { Search, X, MapPin, Factory, Settings } from 'lucide-react'
 import { useStore } from '../store/useStore'
 
 interface SearchResult {
@@ -91,9 +92,9 @@ export default function SearchBar() {
     return () => document.removeEventListener('pointerdown', handler)
   }, [])
 
-  const typeIcon: Record<string, string> = {
-    'dob.': '🟢', 'nagn.': '🔵', 'likv.': '⚫', 'water': '🩵',
-    'gaz': '🟡', 'kontr.': '🟣', 'razv.': '🟠', 'bkns': '🏭', 'gu': '⚙️'
+  const typeColor: Record<string, string> = {
+    'dob.': '#22c55e', 'nagn.': '#3b82f6', 'likv.': '#6b7280', 'water': '#06b6d4',
+    'gaz': '#eab308', 'kontr.': '#8b5cf6', 'razv.': '#f97316', 'bkns': '#ef4444', 'gu': '#f59e0b'
   }
 
   return (
@@ -113,7 +114,7 @@ export default function SearchBar() {
         padding: '0 12px',
         boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
       }}>
-        <span style={{ fontSize: 16, marginRight: 8, opacity: 0.5, flexShrink: 0 }}>🔍</span>
+        <Search size={16} style={{ marginRight: 8, opacity: 0.5, flexShrink: 0 }} />
         <input
           ref={inputRef}
           value={query}
@@ -138,13 +139,14 @@ export default function SearchBar() {
         {query && (
           <button
             onClick={() => { setQuery(''); setResults([]); setOpen(false); inputRef.current?.focus() }}
+            aria-label="Очистить поиск"
             style={{
               background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer',
-              fontSize: 18, padding: 8, minWidth: 36, minHeight: 36,
+              padding: 8, minWidth: 44, minHeight: 44,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               touchAction: 'manipulation',
             }}
-          >✕</button>
+          ><X size={16} /></button>
         )}
       </div>
 
@@ -181,7 +183,7 @@ export default function SearchBar() {
                 touchAction: 'manipulation',
               }}
             >
-              <span style={{ fontSize: 16, flexShrink: 0 }}>{typeIcon[r.type] || '📍'}</span>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: typeColor[r.type] || '#94a3b8', flexShrink: 0 }} />
               <span style={{ fontWeight: 500 }}>{r.name}</span>
             </button>
           ))}

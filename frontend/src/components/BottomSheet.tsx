@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
+import { Layers, Map, MapPin } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import LayersPanel from './panels/LayersPanel'
 import RoutePanel from './panels/RoutePanel'
@@ -46,9 +47,9 @@ export default function BottomSheet() {
   }, [dragging, dragDy]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const tabs = [
-    { key: 'layers' as const, icon: '🗂', label: 'Слои' },
-    { key: 'route'  as const, icon: '🗺', label: 'Маршрут' },
-    { key: 'object' as const, icon: '📍', label: 'Объект' },
+    { key: 'layers' as const, Icon: Layers, label: 'Слои' },
+    { key: 'route'  as const, Icon: Map, label: 'Маршрут' },
+    { key: 'object' as const, Icon: MapPin, label: 'Объект' },
   ]
 
   return (
@@ -115,7 +116,7 @@ export default function BottomSheet() {
                   gap: 2,
                 }}
               >
-                <span style={{ fontSize: 16 }}>{tab.icon}</span>
+                <tab.Icon size={16} />
                 <span>{tab.label}</span>
               </button>
             )

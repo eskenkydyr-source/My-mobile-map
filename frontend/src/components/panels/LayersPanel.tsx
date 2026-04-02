@@ -2,19 +2,20 @@ import { useState, useEffect, useRef } from 'react'
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth'
 import { doc, setDoc, addDoc, collection, getDoc, deleteDoc, onSnapshot } from 'firebase/firestore'
 import { ref, uploadBytesResumable } from 'firebase/storage'
+import { Link, Ruler, Plus, Hand, Unlink, Trash2, Scissors, Map, Satellite, Moon, Route, Download, Lock, Unlock, Loader, CheckCircle, AlertCircle, Globe } from 'lucide-react'
 import { auth, db, storage } from '../../firebase'
 import { useStore } from '../../store/useStore'
 import type { WellType } from '../../store/useStore'
 import { haversine } from '../../utils/distance'
 
 const SUBMODES = [
-  { key: 'chain'   as const, icon: '⛓', label: 'Цепочка',     hint: 'Клик на пустое место = новый узел. Клик на существующий узел = продолжить цепочку оттуда' },
-  { key: 'segment' as const, icon: '📏', label: 'Отрезок',     hint: 'Клик на пустое место или существующий узел = начало. ② Клик = конец → узлы через N метров' },
-  { key: 'add'     as const, icon: '➕', label: 'Узел',        hint: 'Клик на карте — добавить один узел' },
-  { key: 'move'    as const, icon: '✋', label: 'Переместить', hint: '① Клик на узле → ② Клик на новом месте' },
-  { key: 'addedge' as const, icon: '🔗', label: 'Ребро',       hint: '① Клик на 1-м узле → ② Клик на 2-м узле' },
-  { key: 'del'     as const, icon: '🗑', label: 'Уд.узел',     hint: 'Клик на узле — удалить его и все рёбра' },
-  { key: 'deledge' as const, icon: '✂️', label: 'Уд.ребро',   hint: 'Клик на линии — удалить эту связь' },
+  { key: 'chain'   as const, Icon: Link,     label: 'Цепочка',     hint: 'Клик на пустое место = новый узел. Клик на существующий узел = продолжить цепочку оттуда' },
+  { key: 'segment' as const, Icon: Ruler,    label: 'Отрезок',     hint: 'Клик на пустое место или существующий узел = начало. ② Клик = конец → узлы через N метров' },
+  { key: 'add'     as const, Icon: Plus,     label: 'Узел',        hint: 'Клик на карте — добавить один узел' },
+  { key: 'move'    as const, Icon: Hand,     label: 'Переместить', hint: '① Клик на узле → ② Клик на новом месте' },
+  { key: 'addedge' as const, Icon: Unlink,   label: 'Ребро',       hint: '① Клик на 1-м узле → ② Клик на 2-м узле' },
+  { key: 'del'     as const, Icon: Trash2,   label: 'Уд.узел',     hint: 'Клик на узле — удалить его и все рёбра' },
+  { key: 'deledge' as const, Icon: Scissors, label: 'Уд.ребро',   hint: 'Клик на линии — удалить эту связь' },
 ]
 
 const SEGMENT_STEPS = [
@@ -347,7 +348,7 @@ out geom;`
             title={s.hint}
             style={btnStyle(editSubmode === s.key, { active: '#4f46e5', border: '#6366f1' })}
           >
-            <span>{s.icon}</span>
+            <s.Icon size={14} />
             <span>{s.label}</span>
           </button>
         ))}
@@ -423,7 +424,7 @@ out geom;`
           }}
           title="Удалить все узлы и рёбра"
         >
-          🗑 Очистить
+          <Trash2 size={14} /> Очистить
         </button>
         <button
           onClick={importFromOSM}
@@ -437,7 +438,7 @@ out geom;`
             touchAction: 'manipulation',
           }}
         >
-          {importing ? '⏳ Загружаю из OSM...' : '🗺 Импорт дорог OSM (25м)'}
+          {importing ? <><Loader size={14} className="spin" /> Загружаю из OSM...</> : <><Globe size={14} /> Импорт дорог OSM (25м)</>}
         </button>
       </div>
 
@@ -617,10 +618,10 @@ function TileDownloader() {
         }}
       >
         {downloading
-          ? `📥 Загрузка тайлов: ${progress.done}/${progress.total}`
+          ? <><Download size={14} /> Загрузка тайлов: {progress.done}/{progress.total}</>
           : status === 'done'
-            ? '✅ Карта сохранена для офлайна'
-            : '📥 Скачать карту для офлайна'}
+            ? <><CheckCircle size={14} /> Карта сохранена для офлайна</>
+            : <><Download size={14} /> Скачать карту для офлайна</>}
       </button>
       {downloading && (
         <div style={{ marginTop: 4, height: 4, background: '#1e293b', borderRadius: 2 }}>
@@ -646,9 +647,9 @@ const WELL_TYPES: { key: WellType; label: string; color: string; count: number }
 ]
 
 const BASE_LAYERS = [
-  { key: 'osm'  as const, label: '🗺 Карта' },
-  { key: 'sat'  as const, label: '🛰 Спутник' },
-  { key: 'dark' as const, label: '🌙 Тёмная' },
+  { key: 'osm'  as const, Icon: Map,       label: 'Карта' },
+  { key: 'sat'  as const, Icon: Satellite,  label: 'Спутник' },
+  { key: 'dark' as const, Icon: Moon,       label: 'Тёмная' },
 ]
 
 export default function LayersPanel() {
@@ -714,7 +715,7 @@ export default function LayersPanel() {
                 borderRadius: 6, cursor: 'pointer', touchAction: 'manipulation',
               }}
             >
-              {b.label}
+              <b.Icon size={14} /> {b.label}
             </button>
           ))}
         </div>
@@ -726,15 +727,16 @@ export default function LayersPanel() {
           Слои
         </div>
         {[
-          { key: 'roads', label: 'Дороги',    icon: '🛣' },
-          { key: 'bkns',  label: 'БКНС (11)', icon: '🔴' },
-          { key: 'gu',    label: 'ГУ (73)',    icon: '🟡' },
-          { key: 'wells', label: 'Скважины',   icon: '⚫' },
+          { key: 'roads', label: 'Дороги',    color: '#94a3b8', Icon: Route },
+          { key: 'bkns',  label: 'БКНС (11)', color: '#ef4444', Icon: null },
+          { key: 'gu',    label: 'ГУ (73)',    color: '#f59e0b', Icon: null },
+          { key: 'wells', label: 'Скважины',   color: '#6b7280', Icon: null },
         ].map(l => (
           <label key={l.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 0', cursor: 'pointer', fontSize: 13, touchAction: 'manipulation' }}>
             <input type="checkbox" checked={layers[l.key] ?? false} onChange={() => toggleLayer(l.key)}
               style={{ width: 18, height: 18 }} />
-            <span>{l.icon} {l.label}</span>
+            {l.Icon ? <l.Icon size={14} color={l.color} /> : <span style={{ width: 10, height: 10, borderRadius: '50%', background: l.color, flexShrink: 0 }} />}
+            <span>{l.label}</span>
           </label>
         ))}
       </div>
@@ -773,7 +775,7 @@ export default function LayersPanel() {
               borderRadius: 6, cursor: 'pointer', touchAction: 'manipulation',
             }}
           >
-            {editMode ? '✏️ Редактор: ВКЛ' : '🔒 Редактор графа'}
+            {editMode ? <><Unlock size={14} /> Редактор: ВКЛ</> : <><Lock size={14} /> Редактор графа</>}
           </button>
 
           {/* Firebase Auth: форма входа */}

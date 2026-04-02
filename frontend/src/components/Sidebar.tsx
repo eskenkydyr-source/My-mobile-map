@@ -1,7 +1,14 @@
+import { Layers, Map, MapPin } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import LayersPanel from './panels/LayersPanel'
 import RoutePanel from './panels/RoutePanel'
 import ObjectPanel from './panels/ObjectPanel'
+
+const TABS = [
+  { key: 'layers' as const, Icon: Layers, label: 'Слои' },
+  { key: 'route'  as const, Icon: Map, label: 'Маршрут' },
+  { key: 'object' as const, Icon: MapPin, label: 'Объект' },
+]
 
 export default function Sidebar() {
   const { activeTab, setActiveTab } = useStore()
@@ -26,19 +33,21 @@ export default function Sidebar() {
 
       {/* Вкладки */}
       <div style={{ display: 'flex', borderBottom: '1px solid #1e293b' }}>
-        {(['layers', 'route', 'object'] as const).map(tab => (
+        {TABS.map(({ key, Icon, label }) => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
+            key={key}
+            onClick={() => setActiveTab(key)}
             style={{
               flex: 1, padding: '12px 4px', fontSize: 12, minHeight: 44,
-              background: activeTab === tab ? '#1e293b' : 'transparent',
-              color: activeTab === tab ? '#38bdf8' : '#64748b',
-              border: 'none', borderBottom: activeTab === tab ? '2px solid #38bdf8' : '2px solid transparent',
-              cursor: 'pointer', transition: 'all 0.15s'
+              background: activeTab === key ? '#1e293b' : 'transparent',
+              color: activeTab === key ? '#38bdf8' : '#64748b',
+              border: 'none', borderBottom: activeTab === key ? '2px solid #38bdf8' : '2px solid transparent',
+              cursor: 'pointer', transition: 'all 0.15s',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
             }}
           >
-            {tab === 'layers' ? '🗂 Слои' : tab === 'route' ? '🗺 Маршрут' : '📍 Объект'}
+            <Icon size={14} />
+            {label}
           </button>
         ))}
       </div>

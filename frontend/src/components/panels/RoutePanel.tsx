@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { MapPin, Radio, X, Map, Ruler, Clock, AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react'
 import { useStore } from '../../store/useStore'
 import { searchObjects } from '../../utils/search'
 import type { SearchResult } from '../../utils/search'
@@ -93,7 +94,7 @@ export default function RoutePanel() {
               border: '1px solid #334155', borderRadius: 6, cursor: 'pointer',
               touchAction: 'manipulation',
             }}
-          >📍</button>
+          ><MapPin size={18} /></button>
           <button
             onClick={() => locateMe(which)}
             title="Моё местоположение"
@@ -104,7 +105,7 @@ export default function RoutePanel() {
               border: '1px solid #334155', borderRadius: 6, cursor: 'pointer',
               touchAction: 'manipulation',
             }}
-          >📡</button>
+          ><Radio size={18} /></button>
         </div>
 
         {/* Результаты поиска */}
@@ -124,7 +125,7 @@ export default function RoutePanel() {
                   touchAction: 'manipulation',
                 }}
               >
-                <span>{r.type === 'well' ? '⚫' : r.type === 'bkns' ? '🔴' : '🟡'}</span>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: r.type === 'well' ? '#6b7280' : r.type === 'bkns' ? '#ef4444' : '#f59e0b', flexShrink: 0 }} />
                 <span>{r.name}</span>
               </div>
             ))}
@@ -156,7 +157,7 @@ export default function RoutePanel() {
           borderRadius: 6, padding: '8px 10px',
           fontSize: 12, color: '#fca5a5', marginBottom: 8
         }}>
-          ❌ {locError}
+          <AlertCircle size={14} /> {locError}
         </div>
       )}
 
@@ -173,7 +174,7 @@ export default function RoutePanel() {
             touchAction: 'manipulation',
           }}
         >
-          🗺 Построить маршрут
+          <Map size={16} /> Построить маршрут
         </button>
         <button
           onClick={clearRoute}
@@ -184,7 +185,7 @@ export default function RoutePanel() {
             border: '1px solid #334155', borderRadius: 6, cursor: 'pointer',
             touchAction: 'manipulation',
           }}
-        >✕</button>
+        ><X size={16} /></button>
       </div>
 
       {routeInfo && (
@@ -194,20 +195,20 @@ export default function RoutePanel() {
           border: '1px solid #334155'
         }}>
           <div style={{ fontSize: 14, color: '#22c55e', fontWeight: 600, marginBottom: 4 }}>
-            ✅ Маршрут построен
+            <CheckCircle size={14} /> Маршрут построен
           </div>
-          <div style={{ fontSize: 13, color: '#94a3b8' }}>
-            📏 {(routeInfo.distance / 1000).toFixed(1)} км
+          <div style={{ fontSize: 13, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Ruler size={13} /> {(routeInfo.distance / 1000).toFixed(1)} км
           </div>
-          <div style={{ fontSize: 13, color: '#94a3b8' }}>
-            ⏱ ~{routeInfo.duration.toFixed(0)} мин (30 км/ч)
+          <div style={{ fontSize: 13, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Clock size={13} /> ~{routeInfo.duration.toFixed(0)} мин (30 км/ч)
           </div>
         </div>
       )}
 
       {routePath !== null && routePath.length === 0 && from && to && (
         <div style={{ marginTop: 8, fontSize: 13, color: '#f59e0b', textAlign: 'center' }}>
-          ⚠️ Маршрут не найден — нет дороги
+          <AlertTriangle size={14} /> Маршрут не найден — нет дороги
         </div>
       )}
     </div>

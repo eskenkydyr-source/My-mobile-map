@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { Compass, Crosshair, MapPin, Loader } from 'lucide-react'
 import MapView from './components/MapView'
 import Sidebar from './components/Sidebar'
 import BottomSheet from './components/BottomSheet'
@@ -209,24 +210,24 @@ export default function App() {
         )}
 
         {canNavigate && (
-          <button onClick={() => setNavActive(true)} title="Начать навигацию" style={fabStyle({
+          <button onClick={() => setNavActive(true)} title="Начать навигацию" aria-label="Начать навигацию" style={fabStyle({
             background: '#16a34a', border: '2px solid #22c55e',
             boxShadow: '0 4px 16px rgba(22,163,74,0.5)',
-          })}>🧭</button>
+          })}><Compass size={22} /></button>
         )}
 
         {!navActive && (
-          <button onClick={goToMyLocation} title="Моё местоположение" style={fabStyle({
+          <button onClick={goToMyLocation} title="Моё местоположение" aria-label="Моё местоположение" style={fabStyle({
             background: locating ? '#1d4ed8' : '#0f172a',
             border: '2px solid ' + (locating ? '#3b82f6' : '#334155'),
-          })}>{locating ? '⏳' : '🎯'}</button>
+          })}>{locating ? <Loader size={20} className="spin" /> : <Crosshair size={20} />}</button>
         )}
 
         {!navActive && (
-          <button onClick={() => setMarkerMode(!markerMode)} title="Поставить метку" style={fabStyle({
+          <button onClick={() => setMarkerMode(!markerMode)} title="Поставить метку" aria-label="Поставить метку" style={fabStyle({
             background: markerMode ? '#f59e0b' : '#0f172a',
             border: '2px solid ' + (markerMode ? '#f59e0b' : '#334155'),
-          })}>📍</button>
+          })}><MapPin size={20} /></button>
         )}
       </div>
     </div>

@@ -141,6 +141,15 @@ a:focus-visible,
   opacity: 0.85;
 }
 
+/* Spin animation for loaders */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.spin {
+  animation: spin 1s linear infinite;
+}
+
 /* Pulse animation for reroute indicator */
 @keyframes pulse {
   0%, 100% { opacity: 1; }

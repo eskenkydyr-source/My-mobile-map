@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { MapPin, Crosshair, Flag, Loader, AlertCircle } from 'lucide-react'
 import { useStore } from '../../store/useStore'
 
 export default function ObjectPanel() {
@@ -9,7 +10,7 @@ export default function ObjectPanel() {
   if (!selectedObject) {
     return (
       <div style={{ padding: '32px 20px', textAlign: 'center' }}>
-        <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.4 }}>📍</div>
+        <MapPin size={36} style={{ marginBottom: 12, opacity: 0.4, margin: '0 auto 12px' }} />
         <div style={{ color: '#94a3b8', fontSize: 14, fontWeight: 500, marginBottom: 6 }}>
           Объект не выбран
         </div>
@@ -113,9 +114,10 @@ export default function ObjectPanel() {
         <div style={{
           background: '#450a0a', border: '1px solid #7f1d1d',
           borderRadius: 6, padding: '8px 10px',
-          fontSize: 12, color: '#fca5a5', marginBottom: 10
+          fontSize: 12, color: '#fca5a5', marginBottom: 10,
+          display: 'flex', alignItems: 'center', gap: 6,
         }}>
-          ❌ {locError}
+          <AlertCircle size={14} /> {locError}
         </div>
       )}
 
@@ -133,7 +135,7 @@ export default function ObjectPanel() {
           touchAction: 'manipulation',
         }}
       >
-        {routing ? '⏳ Определяю местоположение...' : '🎯 Маршрут от меня сюда'}
+        {routing ? <><Loader size={14} className="spin" /> Определяю местоположение...</> : <><Crosshair size={14} /> Маршрут от меня сюда</>}
       </button>
 
       {/* Кнопки откуда/куда */}
@@ -147,7 +149,7 @@ export default function ObjectPanel() {
             touchAction: 'manipulation',
           }}
         >
-          📍 Откуда
+          <MapPin size={14} /> Откуда
         </button>
         <button
           onClick={() => setAsRoute('to')}
@@ -158,7 +160,7 @@ export default function ObjectPanel() {
             touchAction: 'manipulation',
           }}
         >
-          🏁 Куда
+          <Flag size={14} /> Куда
         </button>
       </div>
     </div>
