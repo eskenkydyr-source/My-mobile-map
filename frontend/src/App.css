@@ -6,7 +6,7 @@
 }
 
 body {
-  font-family: -apple-system, 'SF Pro Text', 'Segoe UI', sans-serif;
+  font-family: 'Inter', -apple-system, 'SF Pro Text', 'Segoe UI', sans-serif;
   background: #0f172a;
   overscroll-behavior: none;
 }
