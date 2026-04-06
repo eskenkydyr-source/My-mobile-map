@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Search, X, MapPin, Factory, Settings } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import { theme as t } from '../theme'
 import { useStore } from '../store/useStore'
 

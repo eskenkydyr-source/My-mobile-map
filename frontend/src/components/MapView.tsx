@@ -216,7 +216,7 @@ export default function MapView() {
     editMode, editSubmode,
     selectedNodeIdx, setSelectedNodeIdx,
     segmentStep,
-    wells, bkns, gu, editGraph, setMapData, setEditGraph, saveGraph,
+    wells, bkns, gu, editGraph, setMapData, saveGraph,
     myLocation,
     navActive, gpsHeading,
   } = useStore()

@@ -7,12 +7,14 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build:firebase": "FIREBASE=true tsc -b && FIREBASE=true vite build",
+    "build:firebase": "cross-env FIREBASE=true tsc -b && cross-env FIREBASE=true vite build",
     "build:mobile": "CAPACITOR=true tsc -b && CAPACITOR=true vite build && npx cap sync android",
     "lint": "eslint .",
     "preview": "vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "deploy:firebase": "npm run build:firebase && cd .. && npx firebase deploy --only hosting",
+    "deploy:all": "npm run deploy && npm run deploy:firebase"
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",
@@ -33,6 +35,7 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
+    "cross-env": "^10.1.0",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
