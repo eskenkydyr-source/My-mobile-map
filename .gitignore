@@ -21,3 +21,4 @@ frontend/android/build/
 .idea/
 .vscode/
 *.swp
+.gstack/
