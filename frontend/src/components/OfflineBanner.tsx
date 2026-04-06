@@ -88,7 +88,7 @@ export default function OfflineBanner() {
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, zIndex: 10000,
-      padding: '6px 12px', fontSize: 12, fontWeight: 600, textAlign: 'center',
+      padding: '8px 12px', fontSize: 12, fontWeight: 600, textAlign: 'center',
       background: !online ? '#7f1d1d' : syncing ? '#92400e' : '#065f46',
       color: '#fff',
     }}>

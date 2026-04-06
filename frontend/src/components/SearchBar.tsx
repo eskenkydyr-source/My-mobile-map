@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Search, X, MapPin, Factory, Settings } from 'lucide-react'
+import { theme as t } from '../theme'
 import { useStore } from '../store/useStore'
 
 interface SearchResult {
@@ -108,8 +109,8 @@ export default function SearchBar() {
     }}>
       <div style={{
         display: 'flex', alignItems: 'center',
-        background: '#0f172a',
-        border: '1px solid #334155',
+        background: t.bg.base,
+        border: `1px solid ${t.border.default}`,
         borderRadius: open && results.length > 0 ? '12px 12px 0 0' : 12,
         padding: '0 12px',
         boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
@@ -130,7 +131,7 @@ export default function SearchBar() {
             background: 'transparent',
             border: 'none',
             outline: 'none',
-            color: '#f1f5f9',
+            color: t.text.primary,
             fontSize: 16, /* 16px — без автозума на iOS */
             padding: '12px 0',
             minHeight: 44,
@@ -141,7 +142,7 @@ export default function SearchBar() {
             onClick={() => { setQuery(''); setResults([]); setOpen(false); inputRef.current?.focus() }}
             aria-label="Очистить поиск"
             style={{
-              background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer',
+              background: 'none', border: 'none', color: t.text.secondary, cursor: 'pointer',
               padding: 8, minWidth: 44, minHeight: 44,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               touchAction: 'manipulation',
@@ -152,8 +153,8 @@ export default function SearchBar() {
 
       {open && results.length > 0 && (
         <div style={{
-          background: '#0f172a',
-          border: '1px solid #334155',
+          background: t.bg.base,
+          border: `1px solid ${t.border.default}`,
           borderTop: 'none',
           borderRadius: '0 0 12px 12px',
           overflow: 'hidden',
@@ -170,20 +171,20 @@ export default function SearchBar() {
                 width: '100%',
                 background: 'none',
                 border: 'none',
-                borderTop: i > 0 ? '1px solid #1e293b' : 'none',
-                color: '#f1f5f9',
-                padding: '14px 12px',
+                borderTop: i > 0 ? `1px solid ${t.border.subtle}` : 'none',
+                color: t.text.primary,
+                padding: '12px',
                 minHeight: 48,
                 textAlign: 'left',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 10,
-                fontSize: 14,
+                gap: 8,
+                fontSize: 13,
                 touchAction: 'manipulation',
               }}
             >
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: typeColor[r.type] || '#94a3b8', flexShrink: 0 }} />
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: typeColor[r.type] || t.text.secondary, flexShrink: 0 }} />
               <span style={{ fontWeight: 500 }}>{r.name}</span>
             </button>
           ))}
@@ -192,12 +193,12 @@ export default function SearchBar() {
 
       {open && results.length === 0 && query.trim().length >= 1 && (
         <div style={{
-          background: '#0f172a',
-          border: '1px solid #334155',
+          background: t.bg.base,
+          border: `1px solid ${t.border.default}`,
           borderTop: 'none',
           borderRadius: '0 0 12px 12px',
           padding: '16px 12px',
-          color: '#64748b',
+          color: t.text.muted,
           fontSize: 13,
           textAlign: 'center',
         }}>

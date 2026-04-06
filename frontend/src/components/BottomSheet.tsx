@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { Layers, Map, MapPin } from 'lucide-react'
+import { theme as t } from '../theme'
 import { useStore } from '../store/useStore'
 import LayersPanel from './panels/LayersPanel'
 import RoutePanel from './panels/RoutePanel'
@@ -60,7 +61,7 @@ export default function BottomSheet() {
         left: 0, right: 0, bottom: 0,
         height: heightVal,
         minHeight: 60,
-        background: '#0f172a',
+        background: t.bg.base,
         borderRadius: '16px 16px 0 0',
         boxShadow: '0 -2px 20px rgba(0,0,0,0.6)',
         zIndex: 1000,
@@ -77,18 +78,18 @@ export default function BottomSheet() {
         onTouchEnd={onTouchEnd}
         style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center',
-          padding: '6px 0 0', flexShrink: 0,
+          padding: '8px 0 0', flexShrink: 0,
           touchAction: 'none', userSelect: 'none', cursor: 'grab',
         }}
       >
         {/* Handle pill */}
         <div style={{
           width: 32, height: 4, borderRadius: 2,
-          background: '#475569', marginBottom: 6,
+          background: t.text.dim, marginBottom: 8,
         }} />
 
         {/* Tabs — visible even in peek */}
-        <div style={{ display: 'flex', width: '100%', borderBottom: '1px solid #1e293b' }}>
+        <div style={{ display: 'flex', width: '100%', borderBottom: `1px solid ${t.border.subtle}` }}>
           {tabs.map(tab => {
             const isActive = activeTab === tab.key
             return (
@@ -100,20 +101,20 @@ export default function BottomSheet() {
                 }}
                 style={{
                   flex: 1,
-                  padding: '8px 4px 10px',
+                  padding: '8px 4px 8px',
                   minHeight: 44,
                   fontSize: 11,
                   fontWeight: isActive ? 700 : 400,
                   background: 'transparent',
-                  color: isActive ? '#38bdf8' : '#64748b',
+                  color: isActive ? t.accent : t.text.muted,
                   border: 'none',
-                  borderBottom: isActive ? '2px solid #38bdf8' : '2px solid transparent',
+                  borderBottom: isActive ? `2px solid ${t.accent}` : '2px solid transparent',
                   cursor: 'pointer',
                   touchAction: 'manipulation',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  gap: 2,
+                  gap: 4,
                 }}
               >
                 <tab.Icon size={16} />
@@ -129,8 +130,8 @@ export default function BottomSheet() {
         <div
           onClick={() => setSnap('half')}
           style={{
-            padding: '6px 0 2px',
-            textAlign: 'center', fontSize: 11, color: '#475569',
+            padding: '8px 0 4px',
+            textAlign: 'center', fontSize: 11, color: t.text.dim,
             cursor: 'pointer',
           }}
         >

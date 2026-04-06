@@ -4,6 +4,7 @@ import { doc, setDoc, addDoc, collection, getDoc, deleteDoc, onSnapshot } from '
 import { ref, uploadBytesResumable } from 'firebase/storage'
 import { Link, Ruler, Plus, Hand, Unlink, Trash2, Scissors, Map, Satellite, Moon, Route, Download, Lock, Unlock, Loader, CheckCircle, AlertCircle, Globe } from 'lucide-react'
 import { auth, db, storage } from '../../firebase'
+import { theme as t } from '../../theme'
 import { useStore } from '../../store/useStore'
 import type { WellType } from '../../store/useStore'
 import { haversine } from '../../utils/distance'
@@ -27,10 +28,10 @@ const SEGMENT_STEPS = [
 
 // Стиль кнопки — минимум 44px для мобильного
 const btnStyle = (active: boolean, colors: { active: string; border: string }): React.CSSProperties => ({
-  padding: '10px 4px', fontSize: 12, minHeight: 44,
-  background: active ? colors.active : '#1e293b',
-  color: active ? '#fff' : '#94a3b8',
-  border: '1px solid ' + (active ? colors.border : '#334155'),
+  padding: '8px 4px', fontSize: 12, minHeight: 44,
+  background: active ? colors.active : t.bg.surface,
+  color: active ? '#fff' : t.text.secondary,
+  border: `1px solid ${active ? colors.border : t.border.default}`,
   borderRadius: 6, cursor: 'pointer',
   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
   touchAction: 'manipulation' as const,
@@ -318,12 +319,12 @@ out geom;`
   const needsNodeSelect = editSubmode === 'move' || editSubmode === 'addedge'
 
   return (
-    <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
       {/* Конфликт блокировки */}
       {lockConflict && (
         <div style={{
           background: '#451a03', border: '1px solid #92400e',
-          borderRadius: 6, padding: '8px 10px', fontSize: 12, color: '#fbbf24',
+          borderRadius: 6, padding: '8px 12px', fontSize: 12, color: '#fbbf24',
         }}>
           {lockOwner} сейчас редактирует граф. Подождите или ваши изменения могут перезаписать чужие.
         </div>
@@ -331,12 +332,12 @@ out geom;`
 
       {/* Последний редактор */}
       {lastEditor && (
-        <div style={{ fontSize: 11, color: '#64748b', padding: '4px 0' }}>
+        <div style={{ fontSize: 11, color: t.text.muted, padding: '4px 0' }}>
           Сохранил: {lastEditor.email} ({new Date(lastEditor.date).toLocaleString('ru')})
         </div>
       )}
 
-      <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: 1 }}>
+      <div style={{ fontSize: 11, color: t.text.dim, textTransform: 'uppercase', letterSpacing: 1 }}>
         Инструменты
       </div>
 
@@ -356,9 +357,9 @@ out geom;`
 
       {activeHint && (
         <div style={{
-          background: '#1e293b', border: '1px solid #334155',
-          borderRadius: 6, padding: '6px 8px',
-          fontSize: 11, color: '#94a3b8', lineHeight: 1.4
+          background: t.bg.surface, border: `1px solid ${t.border.default}`,
+          borderRadius: 6, padding: '8px',
+          fontSize: 11, color: t.text.secondary, lineHeight: 1.4
         }}>
           💡 {activeHint}
         </div>
@@ -368,7 +369,7 @@ out geom;`
         <button
           onClick={() => setEditSubmode('chain')}
           style={{
-            padding: '10px 8px', fontSize: 12, fontWeight: 600, minHeight: 44,
+            padding: '8px', fontSize: 12, fontWeight: 600, minHeight: 44,
             background: '#7c2d12', color: '#fdba74',
             border: '1px solid #9a3412', borderRadius: 6, cursor: 'pointer',
             touchAction: 'manipulation',
@@ -380,7 +381,7 @@ out geom;`
 
       {editSubmode === 'segment' && (
         <div>
-          <div style={{ fontSize: 10, color: '#475569', marginBottom: 4 }}>Шаг между узлами:</div>
+          <div style={{ fontSize: 11, color: t.text.dim, marginBottom: 8 }}>Шаг между узлами:</div>
           <div style={{ display: 'flex', gap: 4 }}>
             {SEGMENT_STEPS.map(s => (
               <button
@@ -399,7 +400,7 @@ out geom;`
         <div style={{
           background: selectedNodeIdx !== null ? '#14532d' : '#1c1917',
           border: '1px solid ' + (selectedNodeIdx !== null ? '#166534' : '#44403c'),
-          borderRadius: 6, padding: '6px 8px',
+          borderRadius: 6, padding: '8px',
           fontSize: 11, color: selectedNodeIdx !== null ? '#86efac' : '#78716c',
           textAlign: 'center'
         }}>
@@ -416,7 +417,7 @@ out geom;`
           onClick={clearGraph}
           disabled={importing}
           style={{
-            flex: '0 0 auto', padding: '10px 8px', fontSize: 12, fontWeight: 600, minHeight: 44,
+            flex: '0 0 auto', padding: '8px', fontSize: 12, fontWeight: 600, minHeight: 44,
             background: '#450a0a', color: '#fca5a5',
             border: '1px solid #7f1d1d',
             borderRadius: 6, cursor: 'pointer',
@@ -430,7 +431,7 @@ out geom;`
           onClick={importFromOSM}
           disabled={importing}
           style={{
-            flex: 1, padding: '10px', fontSize: 12, fontWeight: 600, minHeight: 44,
+            flex: 1, padding: '8px', fontSize: 12, fontWeight: 600, minHeight: 44,
             background: importing ? '#1c1917' : '#14532d',
             color: importing ? '#78716c' : '#6ee7b7',
             border: '1px solid ' + (importing ? '#44403c' : '#065f46'),
@@ -446,7 +447,7 @@ out geom;`
         <div style={{
           background: importMsg.startsWith('✅') ? '#14532d' : importMsg.startsWith('❌') ? '#450a0a' : '#1e3a5f',
           border: '1px solid ' + (importMsg.startsWith('✅') ? '#166534' : importMsg.startsWith('❌') ? '#7f1d1d' : '#1e40af'),
-          borderRadius: 6, padding: '8px 10px', fontSize: 11, color: importMsg.startsWith('✅') ? '#86efac' : importMsg.startsWith('❌') ? '#fca5a5' : '#93c5fd',
+          borderRadius: 6, padding: '8px 12px', fontSize: 11, color: importMsg.startsWith('✅') ? '#86efac' : importMsg.startsWith('❌') ? '#fca5a5' : '#93c5fd',
         }}>
           {importMsg}
         </div>
@@ -456,7 +457,7 @@ out geom;`
       {saveError && (
         <div style={{
           background: '#450a0a', border: '1px solid #7f1d1d',
-          borderRadius: 6, padding: '8px 10px', fontSize: 12, color: '#fca5a5'
+          borderRadius: 6, padding: '8px 12px', fontSize: 12, color: '#fca5a5'
         }}>
           ❌ {saveError}
         </div>
@@ -466,8 +467,8 @@ out geom;`
         onClick={saveToCloud}
         disabled={saving}
         style={{
-          width: '100%', padding: '10px', fontSize: 12, fontWeight: 600, minHeight: 44,
-          background: saveStatus === 'ok' ? '#14532d' : saving ? '#1e3a5f' : '#1d4ed8',
+          width: '100%', padding: '8px', fontSize: 12, fontWeight: 600, minHeight: 44,
+          background: saveStatus === 'ok' ? '#14532d' : saving ? '#1e3a5f' : t.accentBlue,
           color: saveStatus === 'ok' ? '#86efac' : '#fff',
           border: '1px solid ' + (saveStatus === 'ok' ? '#166534' : '#2563eb'),
           borderRadius: 6, cursor: saving ? 'wait' : 'pointer',
@@ -498,7 +499,7 @@ out geom;`
         <button
           onClick={exportGraph}
           style={{
-            flex: 1, padding: '10px', fontSize: 12, minHeight: 44,
+            flex: 1, padding: '8px', fontSize: 12, minHeight: 44,
             background: '#064e3b', color: '#6ee7b7',
             border: '1px solid #065f46', borderRadius: 6, cursor: 'pointer',
             touchAction: 'manipulation',
@@ -511,7 +512,7 @@ out geom;`
           <button
             onClick={() => setShowResetConfirm(true)}
             style={{
-              flex: 1, padding: '10px', fontSize: 12, minHeight: 44,
+              flex: 1, padding: '8px', fontSize: 12, minHeight: 44,
               background: '#450a0a', color: '#fca5a5',
               border: '1px solid #7f1d1d', borderRadius: 6, cursor: 'pointer',
               touchAction: 'manipulation',
@@ -524,7 +525,7 @@ out geom;`
             <button
               onClick={() => { resetGraph(); window.location.reload() }}
               style={{
-                flex: 1, padding: '10px', fontSize: 12, minHeight: 44,
+                flex: 1, padding: '8px', fontSize: 12, minHeight: 44,
                 background: '#dc2626', color: '#fff',
                 border: '1px solid #ef4444', borderRadius: 6, cursor: 'pointer',
                 touchAction: 'manipulation',
@@ -535,9 +536,9 @@ out geom;`
             <button
               onClick={() => setShowResetConfirm(false)}
               style={{
-                flex: 1, padding: '10px', fontSize: 12, minHeight: 44,
-                background: '#1e293b', color: '#94a3b8',
-                border: '1px solid #334155', borderRadius: 6, cursor: 'pointer',
+                flex: 1, padding: '8px', fontSize: 12, minHeight: 44,
+                background: t.bg.surface, color: t.text.secondary,
+                border: `1px solid ${t.border.default}`, borderRadius: 6, cursor: 'pointer',
                 touchAction: 'manipulation',
               }}
             >
@@ -605,15 +606,15 @@ function TileDownloader() {
   }
 
   return (
-    <div style={{ paddingTop: 8, borderTop: '1px solid #1e293b' }}>
+    <div style={{ paddingTop: 8, borderTop: `1px solid ${t.border.subtle}` }}>
       <button
         onClick={download}
         disabled={downloading}
         style={{
-          width: '100%', padding: '10px', fontSize: 12, minHeight: 44,
-          background: downloading ? '#1e3a5f' : status === 'done' ? '#065f46' : '#1e293b',
-          color: status === 'done' ? '#34d399' : '#94a3b8',
-          border: '1px solid #334155', borderRadius: 6,
+          width: '100%', padding: '8px', fontSize: 12, minHeight: 44,
+          background: downloading ? '#1e3a5f' : status === 'done' ? '#065f46' : t.bg.surface,
+          color: status === 'done' ? '#34d399' : t.text.secondary,
+          border: `1px solid ${t.border.default}`, borderRadius: 6,
           cursor: downloading ? 'wait' : 'pointer', touchAction: 'manipulation',
         }}
       >
@@ -624,7 +625,7 @@ function TileDownloader() {
             : <><Download size={14} /> Скачать карту для офлайна</>}
       </button>
       {downloading && (
-        <div style={{ marginTop: 4, height: 4, background: '#1e293b', borderRadius: 2 }}>
+        <div style={{ marginTop: 4, height: 4, background: t.bg.surface, borderRadius: 2 }}>
           <div style={{
             height: '100%', borderRadius: 2, background: '#3b82f6',
             width: `${progress.total ? (progress.done / progress.total * 100) : 0}%`,
@@ -699,7 +700,7 @@ export default function LayersPanel() {
 
       {/* Базовая карта */}
       <div>
-        <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>
+        <div style={{ fontSize: 11, color: t.text.dim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
           Подложка
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
@@ -708,10 +709,10 @@ export default function LayersPanel() {
               key={b.key}
               onClick={() => setBasemap(b.key)}
               style={{
-                flex: 1, padding: '10px 4px', fontSize: 12, minHeight: 44,
-                background: basemap === b.key ? '#1d4ed8' : '#1e293b',
-                color: basemap === b.key ? '#fff' : '#94a3b8',
-                border: '1px solid ' + (basemap === b.key ? '#3b82f6' : '#334155'),
+                flex: 1, padding: '8px 4px', fontSize: 12, minHeight: 44,
+                background: basemap === b.key ? t.accentBlue : t.bg.surface,
+                color: basemap === b.key ? '#fff' : t.text.secondary,
+                border: `1px solid ${basemap === b.key ? '#3b82f6' : t.border.default}`,
                 borderRadius: 6, cursor: 'pointer', touchAction: 'manipulation',
               }}
             >
@@ -723,7 +724,7 @@ export default function LayersPanel() {
 
       {/* Объектные слои */}
       <div>
-        <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>
+        <div style={{ fontSize: 11, color: t.text.dim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
           Слои
         </div>
         {[
@@ -732,7 +733,7 @@ export default function LayersPanel() {
           { key: 'gu',    label: 'ГУ (73)',    color: '#f59e0b', Icon: null },
           { key: 'wells', label: 'Скважины',   color: '#6b7280', Icon: null },
         ].map(l => (
-          <label key={l.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 0', cursor: 'pointer', fontSize: 13, touchAction: 'manipulation' }}>
+          <label key={l.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', cursor: 'pointer', fontSize: 13, touchAction: 'manipulation' }}>
             <input type="checkbox" checked={layers[l.key] ?? false} onChange={() => toggleLayer(l.key)}
               style={{ width: 18, height: 18 }} />
             {l.Icon ? <l.Icon size={14} color={l.color} /> : <span style={{ width: 10, height: 10, borderRadius: '50%', background: l.color, flexShrink: 0 }} />}
@@ -744,16 +745,16 @@ export default function LayersPanel() {
       {/* Типы скважин */}
       {layers.wells && (
         <div>
-          <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>
+          <div style={{ fontSize: 11, color: t.text.dim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
             Типы скважин
           </div>
           {WELL_TYPES.map(({ key, label, color, count }) => (
-            <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', cursor: 'pointer', fontSize: 12, touchAction: 'manipulation' }}>
+            <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', cursor: 'pointer', fontSize: 13, touchAction: 'manipulation' }}>
               <input type="checkbox" checked={activeWellTypes.has(key)} onChange={() => toggleWellType(key)}
                 style={{ width: 18, height: 18 }} />
               <span style={{ width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0 }} />
               <span style={{ flex: 1 }}>{label}</span>
-              <span style={{ fontSize: 10, color: '#475569' }}>{count}</span>
+              <span style={{ fontSize: 11, color: t.text.dim }}>{count}</span>
             </label>
           ))}
         </div>
@@ -764,14 +765,14 @@ export default function LayersPanel() {
 
       {/* Редактор — только веб-версия */}
       {!__IS_MOBILE__ && (
-        <div style={{ paddingTop: 8, borderTop: '1px solid #1e293b' }}>
+        <div style={{ paddingTop: 8, borderTop: `1px solid ${t.border.subtle}` }}>
           <button
             onClick={handleEditMode}
             style={{
-              width: '100%', padding: '10px', fontSize: 12, minHeight: 44,
-              background: editMode ? '#7c3aed' : '#1e293b',
-              color: editMode ? '#fff' : '#94a3b8',
-              border: '1px solid ' + (editMode ? '#7c3aed' : '#334155'),
+              width: '100%', padding: '8px', fontSize: 12, minHeight: 44,
+              background: editMode ? '#7c3aed' : t.bg.surface,
+              color: editMode ? '#fff' : t.text.secondary,
+              border: `1px solid ${editMode ? '#7c3aed' : t.border.default}`,
               borderRadius: 6, cursor: 'pointer', touchAction: 'manipulation',
             }}
           >
@@ -781,11 +782,11 @@ export default function LayersPanel() {
           {/* Firebase Auth: форма входа */}
           {showLoginInput && (
             <div style={{
-              marginTop: 8, background: '#1e293b', border: '1px solid #334155',
+              marginTop: 8, background: t.bg.surface, border: `1px solid ${t.border.default}`,
               borderRadius: 8, padding: 12,
               display: 'flex', flexDirection: 'column', gap: 8
             }}>
-              <div style={{ fontSize: 12, color: '#94a3b8' }}>Вход в редактор графа:</div>
+              <div style={{ fontSize: 12, color: t.text.secondary }}>Вход в редактор графа:</div>
               <input
                 type="email"
                 value={loginEmail}
@@ -793,9 +794,9 @@ export default function LayersPanel() {
                 placeholder="Email"
                 autoFocus
                 style={{
-                  padding: '10px 8px', fontSize: 16,
-                  background: '#0f172a', color: '#e2e8f0',
-                  border: '1px solid #334155', borderRadius: 6, outline: 'none',
+                  padding: '8px', fontSize: 16,
+                  background: t.bg.base, color: t.text.primary,
+                  border: `1px solid ${t.border.default}`, borderRadius: 6, outline: 'none',
                 }}
               />
               <input
@@ -805,22 +806,22 @@ export default function LayersPanel() {
                 onKeyDown={e => e.key === 'Enter' && handleLoginSubmit()}
                 placeholder="Пароль"
                 style={{
-                  padding: '10px 8px', fontSize: 16,
-                  background: '#0f172a', color: '#e2e8f0',
-                  border: '1px solid ' + (loginError ? '#ef4444' : '#334155'),
+                  padding: '8px', fontSize: 16,
+                  background: t.bg.base, color: t.text.primary,
+                  border: `1px solid ${loginError ? t.error : t.border.default}`,
                   borderRadius: 6, outline: 'none',
                 }}
               />
               {loginError && (
-                <div style={{ fontSize: 12, color: '#ef4444' }}>❌ {loginError}</div>
+                <div style={{ fontSize: 12, color: t.error }}>❌ {loginError}</div>
               )}
-              <div style={{ display: 'flex', gap: 6 }}>
+              <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   onClick={handleLoginSubmit}
                   disabled={loginLoading}
                   style={{
-                    flex: 1, padding: '10px', fontSize: 13, fontWeight: 600, minHeight: 44,
-                    background: loginLoading ? '#1e3a5f' : '#1d4ed8', color: '#fff',
+                    flex: 1, padding: '8px', fontSize: 13, fontWeight: 600, minHeight: 44,
+                    background: loginLoading ? '#1e3a5f' : t.accentBlue, color: '#fff',
                     border: 'none', borderRadius: 6,
                     cursor: loginLoading ? 'wait' : 'pointer', touchAction: 'manipulation',
                   }}
@@ -830,9 +831,9 @@ export default function LayersPanel() {
                 <button
                   onClick={() => { setShowLoginInput(false); setLoginEmail(''); setLoginPassword(''); setLoginError('') }}
                   style={{
-                    padding: '10px 14px', fontSize: 13, minHeight: 44,
-                    background: '#1e293b', color: '#94a3b8',
-                    border: '1px solid #334155', borderRadius: 6, cursor: 'pointer', touchAction: 'manipulation',
+                    padding: '8px 16px', fontSize: 13, minHeight: 44,
+                    background: t.bg.surface, color: t.text.secondary,
+                    border: `1px solid ${t.border.default}`, borderRadius: 6, cursor: 'pointer', touchAction: 'manipulation',
                   }}
                 >
                   Отмена

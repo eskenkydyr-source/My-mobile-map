@@ -506,7 +506,7 @@ export default function MapView() {
               {myLocation[0].toFixed(5)}, {myLocation[1].toFixed(5)}<br/>
               <button
                 onClick={() => { setFrom({ lat: myLocation[0], lon: myLocation[1], name: 'Моё местоположение' }) }}
-                style={{ marginTop: 6, padding: '4px 8px', fontSize: 11, background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', width: '100%' }}
+                style={{ marginTop: 8, padding: '4px 8px', fontSize: 11, background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', width: '100%' }}
               >
                 Маршрут отсюда
               </button>

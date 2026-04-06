@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { MapPin, Crosshair, Flag, Loader, AlertCircle } from 'lucide-react'
+import { theme as t } from '../../theme'
 import { useStore } from '../../store/useStore'
 
 export default function ObjectPanel() {
@@ -9,12 +10,12 @@ export default function ObjectPanel() {
 
   if (!selectedObject) {
     return (
-      <div style={{ padding: '32px 20px', textAlign: 'center' }}>
+      <div style={{ padding: '32px 24px', textAlign: 'center' }}>
         <MapPin size={36} style={{ marginBottom: 12, opacity: 0.4, margin: '0 auto 12px' }} />
-        <div style={{ color: '#94a3b8', fontSize: 14, fontWeight: 500, marginBottom: 6 }}>
+        <div style={{ color: t.text.secondary, fontSize: 15, fontWeight: 500, marginBottom: 8 }}>
           Объект не выбран
         </div>
-        <div style={{ color: '#475569', fontSize: 12, lineHeight: 1.5 }}>
+        <div style={{ color: t.text.dim, fontSize: 12, lineHeight: 1.5 }}>
           Нажмите на скважину, БКНС или ГУ на карте, чтобы увидеть информацию
         </div>
       </div>
@@ -88,21 +89,21 @@ export default function ObjectPanel() {
 
   return (
     <div style={{ padding: 12 }}>
-      <div style={{ fontSize: 15, fontWeight: 700, color: '#38bdf8', marginBottom: 6 }}>
+      <div style={{ fontSize: 15, fontWeight: 700, color: t.accent, marginBottom: 8 }}>
         {name}
       </div>
-      <div style={{ fontSize: 12, color: '#475569', marginBottom: 12 }}>
+      <div style={{ fontSize: 12, color: t.text.dim, marginBottom: 12 }}>
         {type === 'well' ? 'Скважина' : type === 'bkns' ? 'БКНС' : 'ГУ'} •{' '}
         {lat.toFixed(5)}, {lon.toFixed(5)}
       </div>
 
       {/* Свойства */}
-      <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 14 }}>
+      <div style={{ fontSize: 12, color: t.text.secondary, marginBottom: 16 }}>
         {Object.entries(properties || {})
           .filter(([k, v]) => v && !['id', 'layer_type', 'OBJECTID', 'OBJECTID_1', 'Shape_Leng', 'Shape_Area', 'PERIMETER', 'GU_', 'GU_ID'].includes(k))
           .map(([k, v]) => (
-            <div key={k} style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
-              <span style={{ color: '#475569' }}>{k}:</span>
+            <div key={k} style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+              <span style={{ color: t.text.dim }}>{k}:</span>
               <span>{String(v)}</span>
             </div>
           ))
@@ -113,9 +114,9 @@ export default function ObjectPanel() {
       {locError && (
         <div style={{
           background: '#450a0a', border: '1px solid #7f1d1d',
-          borderRadius: 6, padding: '8px 10px',
-          fontSize: 12, color: '#fca5a5', marginBottom: 10,
-          display: 'flex', alignItems: 'center', gap: 6,
+          borderRadius: 6, padding: '8px 12px',
+          fontSize: 12, color: '#fca5a5', marginBottom: 8,
+          display: 'flex', alignItems: 'center', gap: 8,
         }}>
           <AlertCircle size={14} /> {locError}
         </div>
@@ -126,9 +127,9 @@ export default function ObjectPanel() {
         onClick={routeFromMe}
         disabled={routing}
         style={{
-          width: '100%', padding: '12px', fontSize: 14, fontWeight: 600,
-          minHeight: 48, marginBottom: 10,
-          background: routing ? '#1e3a5f' : '#1d4ed8',
+          width: '100%', padding: '12px', fontSize: 15, fontWeight: 600,
+          minHeight: 48, marginBottom: 8,
+          background: routing ? '#1e3a5f' : t.accentBlue,
           color: '#fff', border: 'none', borderRadius: 6,
           cursor: routing ? 'wait' : 'pointer',
           boxShadow: '0 2px 6px rgba(29,78,216,0.4)',
@@ -144,8 +145,8 @@ export default function ObjectPanel() {
           onClick={() => setAsRoute('from')}
           style={{
             flex: 1, padding: '12px', fontSize: 13, minHeight: 48,
-            background: '#1e293b', color: '#22c55e',
-            border: '1px solid #22c55e', borderRadius: 6, cursor: 'pointer',
+            background: t.bg.surface, color: t.success,
+            border: `1px solid ${t.success}`, borderRadius: 6, cursor: 'pointer',
             touchAction: 'manipulation',
           }}
         >
@@ -155,8 +156,8 @@ export default function ObjectPanel() {
           onClick={() => setAsRoute('to')}
           style={{
             flex: 1, padding: '12px', fontSize: 13, minHeight: 48,
-            background: '#1e293b', color: '#ef4444',
-            border: '1px solid #ef4444', borderRadius: 6, cursor: 'pointer',
+            background: t.bg.surface, color: t.error,
+            border: `1px solid ${t.error}`, borderRadius: 6, cursor: 'pointer',
             touchAction: 'manipulation',
           }}
         >

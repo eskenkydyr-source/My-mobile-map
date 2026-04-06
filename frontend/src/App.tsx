@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Compass, Crosshair, MapPin, Loader } from 'lucide-react'
+import { theme as t } from './theme'
 import MapView from './components/MapView'
 import Sidebar from './components/Sidebar'
 import BottomSheet from './components/BottomSheet'
@@ -19,7 +20,7 @@ const REROUTE_COOLDOWN = 5000
 const FAB_SIZE = 48
 const fabStyle = (overrides: React.CSSProperties = {}): React.CSSProperties => ({
   width: FAB_SIZE, height: FAB_SIZE, borderRadius: '50%',
-  color: '#fff', fontSize: 20, cursor: 'pointer',
+  color: '#fff', cursor: 'pointer',
   boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   ...overrides,
@@ -200,9 +201,9 @@ export default function App() {
         {locMsg && (
           <div style={{
             position: 'absolute', right: 56, top: 0, maxWidth: 200,
-            background: '#0f172a', color: '#94a3b8',
-            border: '1px solid #334155', borderRadius: 8,
-            padding: '8px 10px', fontSize: 12,
+            background: t.bg.base, color: t.text.secondary,
+            border: `1px solid ${t.border.default}`, borderRadius: 8,
+            padding: '8px 12px', fontSize: 12,
             boxShadow: '0 2px 8px rgba(0,0,0,0.5)', whiteSpace: 'nowrap',
           }}>
             {locMsg}
@@ -218,15 +219,15 @@ export default function App() {
 
         {!navActive && (
           <button onClick={goToMyLocation} title="Моё местоположение" aria-label="Моё местоположение" style={fabStyle({
-            background: locating ? '#1d4ed8' : '#0f172a',
-            border: '2px solid ' + (locating ? '#3b82f6' : '#334155'),
+            background: locating ? t.accentBlue : t.bg.base,
+            border: `2px solid ${locating ? '#3b82f6' : t.border.default}`,
           })}>{locating ? <Loader size={20} className="spin" /> : <Crosshair size={20} />}</button>
         )}
 
         {!navActive && (
           <button onClick={() => setMarkerMode(!markerMode)} title="Поставить метку" aria-label="Поставить метку" style={fabStyle({
-            background: markerMode ? '#f59e0b' : '#0f172a',
-            border: '2px solid ' + (markerMode ? '#f59e0b' : '#334155'),
+            background: markerMode ? t.warning : t.bg.base,
+            border: `2px solid ${markerMode ? t.warning : t.border.default}`,
           })}><MapPin size={20} /></button>
         )}
       </div>

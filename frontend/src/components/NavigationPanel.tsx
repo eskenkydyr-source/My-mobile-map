@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { theme as t } from '../theme'
 import { useStore } from '../store/useStore'
 import { haversine } from '../utils/distance'
 
@@ -88,10 +89,10 @@ export default function NavigationPanel({ gpsPos, gpsSpeed, gpsHeading }: Props)
     return (
       <div style={panelStyle}>
         <div style={{ fontSize: 48, textAlign: 'center' }}>🏁</div>
-        <div style={{ fontSize: 20, fontWeight: 700, color: '#22c55e', textAlign: 'center' }}>
+        <div style={{ fontSize: 20, fontWeight: 700, color: t.success, textAlign: 'center' }}>
           Вы прибыли!
         </div>
-        <button onClick={() => setNavActive(false)} style={stopBtnStyle}>
+        <button onClick={() => setNavActive(false)} aria-label="Завершить навигацию" style={stopBtnStyle}>
           ✕ Завершить
         </button>
       </div>
@@ -104,7 +105,7 @@ export default function NavigationPanel({ gpsPos, gpsSpeed, gpsHeading }: Props)
       {rerouting && (
         <div style={{
           background: '#1e3a5f', border: '1px solid #2563eb',
-          borderRadius: 8, padding: '8px 12px', marginBottom: 10,
+          borderRadius: 8, padding: '8px 12px', marginBottom: 8,
           fontSize: 13, color: '#93c5fd', textAlign: 'center',
           animation: 'pulse 1s infinite',
         }}>
@@ -116,20 +117,20 @@ export default function NavigationPanel({ gpsPos, gpsSpeed, gpsHeading }: Props)
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{
           width: 56, height: 56, borderRadius: '50%',
-          background: '#1d4ed8', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: t.accentBlue, display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 28, flexShrink: 0, boxShadow: '0 2px 12px rgba(29,78,216,0.5)',
         }}>
           {dir.arrow}
         </div>
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 20, fontWeight: 700, color: '#f1f5f9' }}>
+          <div style={{ fontSize: 20, fontWeight: 700, color: t.text.primary }}>
             {dir.text}
           </div>
-          <div style={{ fontSize: 13, color: '#94a3b8', marginTop: 2 }}>
-            до цели: <span style={{ color: '#38bdf8', fontWeight: 600 }}>{formatDist(remaining)}</span>
+          <div style={{ fontSize: 13, color: t.text.secondary, marginTop: 4 }}>
+            до цели: <span style={{ color: t.accent, fontWeight: 600 }}>{formatDist(remaining)}</span>
           </div>
           {to && (
-            <div style={{ fontSize: 11, color: '#64748b', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: 11, color: t.text.muted, marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               📍 {to.name}
             </div>
           )}
@@ -137,20 +138,20 @@ export default function NavigationPanel({ gpsPos, gpsSpeed, gpsHeading }: Props)
       </div>
 
       {/* Скорость и ETA */}
-      <div style={{ display: 'flex', gap: 12, marginTop: 10 }}>
+      <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
         {speedKmh !== null && (
           <div style={statBox}>
-            <div style={{ fontSize: 20, fontWeight: 700, color: '#f1f5f9' }}>{speedKmh}</div>
-            <div style={{ fontSize: 11, color: '#64748b' }}>км/ч</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: t.text.primary }}>{speedKmh}</div>
+            <div style={{ fontSize: 11, color: t.text.muted }}>км/ч</div>
           </div>
         )}
         {eta !== null && (
           <div style={statBox}>
-            <div style={{ fontSize: 20, fontWeight: 700, color: '#f1f5f9' }}>{eta}</div>
-            <div style={{ fontSize: 11, color: '#64748b' }}>мин</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: t.text.primary }}>{eta}</div>
+            <div style={{ fontSize: 11, color: t.text.muted }}>мин</div>
           </div>
         )}
-        <button onClick={() => setNavActive(false)} style={stopBtnStyle}>
+        <button onClick={() => setNavActive(false)} aria-label="Остановить навигацию" style={stopBtnStyle}>
           ✕ Стоп
         </button>
       </div>
@@ -164,18 +165,18 @@ const panelStyle: React.CSSProperties = {
   left: '50%',
   transform: 'translateX(-50%)',
   width: 'min(380px, calc(100vw - 16px))',
-  background: '#0f172a',
+  background: t.bg.base,
   border: '1px solid #1e3a5f',
   borderRadius: 16,
-  padding: '14px 16px',
+  padding: '12px 16px',
   zIndex: 1000,
   boxShadow: '0 8px 32px rgba(0,0,0,0.7)',
 }
 
 const statBox: React.CSSProperties = {
   flex: 1,
-  background: '#1e293b',
-  border: '1px solid #334155',
+  background: t.bg.surface,
+  border: `1px solid ${t.border.default}`,
   borderRadius: 10,
   padding: '8px 0',
   textAlign: 'center',
@@ -188,7 +189,7 @@ const stopBtnStyle: React.CSSProperties = {
   border: '1px solid #7f1d1d',
   borderRadius: 10,
   padding: '8px 16px',
-  fontSize: 14,
+  fontSize: 15,
   fontWeight: 600,
   cursor: 'pointer',
   touchAction: 'manipulation',
