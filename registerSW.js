@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/kalamkas-app/sw.js', { scope: '/kalamkas-app/' })})}
