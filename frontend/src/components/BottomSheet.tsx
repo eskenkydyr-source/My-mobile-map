@@ -1,14 +1,14 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
-import { Layers, Map, MapPin } from 'lucide-react'
+import { Layers, Map, MapPin, ChevronUp } from 'lucide-react'
 import { theme as t } from '../theme'
 import { useStore } from '../store/useStore'
 import LayersPanel from './panels/LayersPanel'
 import RoutePanel from './panels/RoutePanel'
 import ObjectPanel from './panels/ObjectPanel'
 
-type Snap = 'peek' | 'half' | 'full'
-const SNAPS: Snap[] = ['peek', 'half', 'full']
-const SNAP_VALUES: Record<Snap, number> = { peek: 0.12, half: 0.50, full: 0.88 }
+type Snap = 'collapsed' | 'peek' | 'half' | 'full'
+const DRAG_SNAPS: Snap[] = ['peek', 'half', 'full']
+const SNAP_VALUES: Record<Snap, number> = { collapsed: 0, peek: 0.12, half: 0.50, full: 0.88 }
 
 export default function BottomSheet() {
   const { activeTab, setActiveTab, selectedObject } = useStore()
@@ -20,10 +20,8 @@ export default function BottomSheet() {
 
   // Автоматически открыть когда выбран объект
   useEffect(() => {
-    if (selectedObject && snap === 'peek') setSnap('half')
+    if (selectedObject && (snap === 'peek' || snap === 'collapsed')) setSnap('half')
   }, [selectedObject]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const heightVal = `calc(${SNAP_VALUES[snap] * 100}vh - ${dragging ? dragDy : 0}px)`
 
   const onTouchStart = useCallback((e: React.TouchEvent) => {
     startY.current = e.touches[0].clientY
@@ -40,12 +38,45 @@ export default function BottomSheet() {
   const onTouchEnd = useCallback(() => {
     setDragging(false)
     const threshold = 60
-    const idx = SNAPS.indexOf(startSnap.current)
-    if (dragDy < -threshold) setSnap(SNAPS[Math.min(idx + 1, SNAPS.length - 1)])
-    else if (dragDy > threshold) setSnap(SNAPS[Math.max(idx - 1, 0)])
+    const idx = DRAG_SNAPS.indexOf(startSnap.current as any)
+    if (idx === -1) { setSnap('peek'); setDragDy(0); return }
+    if (dragDy < -threshold) setSnap(DRAG_SNAPS[Math.min(idx + 1, DRAG_SNAPS.length - 1)])
+    else if (dragDy > threshold) {
+      if (idx === 0) setSnap('collapsed')
+      else setSnap(DRAG_SNAPS[Math.max(idx - 1, 0)])
+    }
     else setSnap(startSnap.current)
     setDragDy(0)
   }, [dragging, dragDy]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Кнопка открытия когда свёрнут (after all hooks)
+  if (snap === 'collapsed') {
+    return (
+      <button
+        onClick={() => setSnap('peek')}
+        aria-label="Открыть панель"
+        style={{
+          position: 'fixed',
+          left: 12,
+          bottom: `calc(12px + env(safe-area-inset-bottom))`,
+          zIndex: 1000,
+          width: 48, height: 48,
+          borderRadius: 12,
+          background: t.bg.base,
+          border: `1px solid ${t.border.default}`,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+          color: t.text.primary,
+          cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          touchAction: 'manipulation',
+        }}
+      >
+        <ChevronUp size={20} />
+      </button>
+    )
+  }
+
+  const heightVal = `calc(${SNAP_VALUES[snap] * 100}vh - ${dragging ? dragDy : 0}px)`
 
   const tabs = [
     { key: 'layers' as const, Icon: Layers, label: 'Слои' },
@@ -125,17 +156,21 @@ export default function BottomSheet() {
         </div>
       </div>
 
-      {/* Swipe-up hint in peek state */}
+      {/* Swipe hint in peek state */}
       {snap === 'peek' && (
-        <div
-          onClick={() => setSnap('half')}
-          style={{
-            padding: '8px 0 4px',
-            textAlign: 'center', fontSize: 11, color: t.text.dim,
-            cursor: 'pointer',
-          }}
-        >
-          ↑ Потяните вверх
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 16, padding: '8px 0 4px' }}>
+          <div
+            onClick={() => setSnap('half')}
+            style={{ fontSize: 11, color: t.text.dim, cursor: 'pointer' }}
+          >
+            ↑ Потяните вверх
+          </div>
+          <div
+            onClick={() => setSnap('collapsed')}
+            style={{ fontSize: 11, color: t.text.dim, cursor: 'pointer' }}
+          >
+            ↓ Свернуть
+          </div>
         </div>
       )}
 
