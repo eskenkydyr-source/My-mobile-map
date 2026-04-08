@@ -472,7 +472,7 @@ out geom;`
           color: saveStatus === 'ok' ? '#86efac' : '#fff',
           border: '1px solid ' + (saveStatus === 'ok' ? '#166534' : '#2563eb'),
           borderRadius: 6, cursor: saving ? 'wait' : 'pointer',
-          transition: 'all 0.2s', touchAction: 'manipulation',
+          transition: 'background 0.2s, color 0.2s, border-color 0.2s', touchAction: 'manipulation',
           position: 'relative', overflow: 'hidden',
         }}
       >

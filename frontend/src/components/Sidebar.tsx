@@ -43,7 +43,7 @@ export default function Sidebar() {
               background: activeTab === key ? t.bg.surface : 'transparent',
               color: activeTab === key ? t.accent : t.text.muted,
               border: 'none', borderBottom: activeTab === key ? `2px solid ${t.accent}` : '2px solid transparent',
-              cursor: 'pointer', transition: 'all 0.15s',
+              cursor: 'pointer', transition: 'color 0.15s, background 0.15s, border-color 0.15s',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}
           >
