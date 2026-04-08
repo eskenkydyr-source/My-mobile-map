@@ -24,7 +24,7 @@ export default function Sidebar() {
     }}>
       {/* Заголовок */}
       <div style={{ padding: '12px 16px', borderBottom: `1px solid ${t.border.subtle}` }}>
-        <h1 style={{ fontSize: 15, fontWeight: 700, color: t.accent, letterSpacing: 1, margin: 0 }}>
+        <h1 style={{ fontSize: 18, fontWeight: 700, color: t.accent, letterSpacing: 1, margin: 0 }}>
           ҚАЛАМҚАС
         </h1>
         <p style={{ fontSize: 11, color: t.text.dim, margin: '4px 0 0' }}>
