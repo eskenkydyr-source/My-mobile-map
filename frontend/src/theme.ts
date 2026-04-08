@@ -19,7 +19,13 @@ export const theme = {
   accentBlue: 'var(--color-accent-blue)',
   success: 'var(--color-success)',
   error: 'var(--color-error)',
+  errorBg: 'var(--color-error-bg)',
+  errorBorder: 'var(--color-error-border)',
+  errorText: 'var(--color-error-text)',
   warning: 'var(--color-warning)',
+  successDark: 'var(--color-success-dark)',
+  successBorder: 'var(--color-success-border)',
+  onColor: 'var(--color-text-on-color)',
   radius: {
     sm: 'var(--radius-sm)',
     md: 'var(--radius-md)',

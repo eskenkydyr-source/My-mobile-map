@@ -104,9 +104,9 @@ export default function NavigationPanel({ gpsPos, gpsSpeed, gpsHeading }: Props)
       {/* Индикатор пересчёта маршрута */}
       {rerouting && (
         <div style={{
-          background: '#1e3a5f', border: '1px solid #2563eb',
+          background: t.bg.elevated, border: `1px solid ${t.accentBlue}`,
           borderRadius: 8, padding: '8px 12px', marginBottom: 8,
-          fontSize: 13, color: '#93c5fd', textAlign: 'center',
+          fontSize: 13, color: t.accent, textAlign: 'center',
           animation: 'pulse 1s infinite',
         }}>
           🔄 Пересчёт маршрута...
@@ -166,7 +166,7 @@ const panelStyle: React.CSSProperties = {
   transform: 'translateX(-50%)',
   width: 'min(380px, calc(100vw - 16px))',
   background: t.bg.base,
-  border: '1px solid #1e3a5f',
+  border: `1px solid ${t.border.default}`,
   borderRadius: 16,
   padding: '12px 16px',
   zIndex: 1000,
@@ -184,9 +184,9 @@ const statBox: React.CSSProperties = {
 
 const stopBtnStyle: React.CSSProperties = {
   flex: 1,
-  background: '#450a0a',
-  color: '#fca5a5',
-  border: '1px solid #7f1d1d',
+  background: t.errorBg,
+  color: t.errorText,
+  border: `1px solid ${t.errorBorder}`,
   borderRadius: 10,
   padding: '8px 16px',
   fontSize: 15,

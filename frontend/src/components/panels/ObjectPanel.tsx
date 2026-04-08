@@ -113,9 +113,9 @@ export default function ObjectPanel() {
       {/* Ошибка геолокации */}
       {locError && (
         <div style={{
-          background: '#450a0a', border: '1px solid #7f1d1d',
+          background: t.errorBg, border: `1px solid ${t.errorBorder}`,
           borderRadius: 6, padding: '8px 12px',
-          fontSize: 12, color: '#fca5a5', marginBottom: 8,
+          fontSize: 12, color: t.errorText, marginBottom: 8,
           display: 'flex', alignItems: 'center', gap: 8,
         }}>
           <AlertCircle size={14} /> {locError}
@@ -129,8 +129,8 @@ export default function ObjectPanel() {
         style={{
           width: '100%', padding: '12px', fontSize: 15, fontWeight: 600,
           minHeight: 48, marginBottom: 8,
-          background: routing ? '#1e3a5f' : t.accentBlue,
-          color: '#fff', border: 'none', borderRadius: 6,
+          background: routing ? t.bg.elevated : t.accentBlue,
+          color: t.onColor, border: 'none', borderRadius: 6,
           cursor: routing ? 'wait' : 'pointer',
           boxShadow: '0 2px 6px rgba(29,78,216,0.4)',
           touchAction: 'manipulation',

@@ -20,7 +20,7 @@ const REROUTE_COOLDOWN = 5000
 const FAB_SIZE = 48
 const fabStyle = (overrides: React.CSSProperties = {}): React.CSSProperties => ({
   width: FAB_SIZE, height: FAB_SIZE, borderRadius: '50%',
-  color: '#fff', cursor: 'pointer',
+  color: t.onColor, cursor: 'pointer',
   boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   ...overrides,
@@ -212,7 +212,7 @@ export default function App() {
 
         {canNavigate && (
           <button onClick={() => setNavActive(true)} title="Начать навигацию" aria-label="Начать навигацию" style={fabStyle({
-            background: '#16a34a', border: '2px solid #22c55e',
+            background: t.successDark, border: `2px solid ${t.successBorder}`,
             boxShadow: '0 4px 16px rgba(22,163,74,0.5)',
           })}><Compass size={22} /></button>
         )}
@@ -220,7 +220,7 @@ export default function App() {
         {!navActive && (
           <button onClick={goToMyLocation} title="Моё местоположение" aria-label="Моё местоположение" style={fabStyle({
             background: locating ? t.accentBlue : t.bg.base,
-            border: `2px solid ${locating ? '#3b82f6' : t.border.default}`,
+            border: `2px solid ${locating ? t.accent : t.border.default}`,
           })}>{locating ? <Loader size={20} className="spin" /> : <Crosshair size={20} />}</button>
         )}
 

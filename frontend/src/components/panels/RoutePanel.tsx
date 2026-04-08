@@ -91,7 +91,7 @@ export default function RoutePanel() {
             style={{
               minWidth: 44, minHeight: 44, padding: '8px',
               background: routeSelectMode === which ? color : t.bg.surface,
-              color: routeSelectMode === which ? '#fff' : t.text.secondary,
+              color: routeSelectMode === which ? t.onColor : t.text.secondary,
               border: `1px solid ${t.border.default}`, borderRadius: 6, cursor: 'pointer',
               touchAction: 'manipulation',
             }}
@@ -129,7 +129,7 @@ export default function RoutePanel() {
                   touchAction: 'manipulation',
                 }}
               >
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: r.type === 'well' ? '#6b7280' : r.type === 'bkns' ? '#ef4444' : '#f59e0b', flexShrink: 0 }} />
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: r.type === 'well' ? t.text.muted : r.type === 'bkns' ? t.error : t.warning, flexShrink: 0 }} />
                 <span>{r.name}</span>
               </div>
             ))}
@@ -143,7 +143,7 @@ export default function RoutePanel() {
     <div style={{ padding: 12 }}>
       {routeSelectMode && (
         <div style={{
-          background: t.accentBlue, color: '#fff',
+          background: t.accentBlue, color: t.onColor,
           padding: '8px 12px', borderRadius: 6, fontSize: 13,
           marginBottom: 8, textAlign: 'center'
         }}>
@@ -157,9 +157,9 @@ export default function RoutePanel() {
       {/* Сообщение об ошибке геолокации */}
       {locError && (
         <div style={{
-          background: '#450a0a', border: '1px solid #7f1d1d',
+          background: t.errorBg, border: `1px solid ${t.errorBorder}`,
           borderRadius: 6, padding: '8px 12px',
-          fontSize: 12, color: '#fca5a5', marginBottom: 8
+          fontSize: 12, color: t.errorText, marginBottom: 8
         }}>
           <AlertCircle size={14} /> {locError}
         </div>
@@ -172,7 +172,7 @@ export default function RoutePanel() {
           style={{
             flex: 1, padding: '12px', fontSize: 15, fontWeight: 600, minHeight: 48,
             background: from && to ? t.accentBlue : t.bg.surface,
-            color: from && to ? '#fff' : t.text.dim,
+            color: from && to ? t.onColor : t.text.dim,
             border: 'none', borderRadius: 6,
             cursor: from && to ? 'pointer' : 'default',
             touchAction: 'manipulation',
