@@ -47,7 +47,7 @@ export default function Sidebar() {
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}
           >
-            <Icon size={14} />
+            <Icon size={16} />
             {label}
           </button>
         ))}
