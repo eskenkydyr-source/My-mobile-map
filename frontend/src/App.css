@@ -136,9 +136,13 @@ a:focus-visible,
   outline-offset: 2px;
 }
 
-/* Hover states for sidebar buttons */
+/* Hover states for sidebar interactive elements */
 .sidebar-wrap button:hover {
   opacity: 0.85;
+}
+.sidebar-wrap label:hover {
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-sm);
 }
 
 /* Dark-theme scrollbar */
