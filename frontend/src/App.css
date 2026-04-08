@@ -31,7 +31,7 @@ body {
   right: calc(16px + env(safe-area-inset-right));
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   z-index: 999;
 }
 
