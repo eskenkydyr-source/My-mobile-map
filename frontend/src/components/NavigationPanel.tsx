@@ -180,6 +180,7 @@ const statBox: React.CSSProperties = {
   borderRadius: 10,
   padding: '8px 0',
   textAlign: 'center',
+  fontVariantNumeric: 'tabular-nums',
 }
 
 const stopBtnStyle: React.CSSProperties = {

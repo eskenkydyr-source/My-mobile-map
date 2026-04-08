@@ -92,7 +92,7 @@ export default function ObjectPanel() {
       <div style={{ fontSize: 15, fontWeight: 700, color: t.accent, marginBottom: 8 }}>
         {name}
       </div>
-      <div style={{ fontSize: 12, color: t.text.dim, marginBottom: 12 }}>
+      <div style={{ fontSize: 12, color: t.text.dim, marginBottom: 12, fontVariantNumeric: 'tabular-nums' }}>
         {type === 'well' ? 'Скважина' : type === 'bkns' ? 'БКНС' : 'ГУ'} •{' '}
         {lat.toFixed(5)}, {lon.toFixed(5)}
       </div>
