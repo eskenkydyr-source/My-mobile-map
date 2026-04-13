@@ -181,11 +181,13 @@ export default function App() {
   const canNavigate = routePath && routePath.length > 1 && !navActive
 
   return (
-    <div className="app">
+    <div className={`app ${navActive ? 'nav-active' : ''}`}>
       <OfflineBanner />
-      <div className="sidebar-wrap">
-        <Sidebar />
-      </div>
+      {!navActive && (
+        <div className="sidebar-wrap">
+          <Sidebar />
+        </div>
+      )}
 
       <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column' }}>
         <MapView />

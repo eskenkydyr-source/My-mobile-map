@@ -179,3 +179,14 @@ a:focus-visible,
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
 }
+
+/* ===== Navigation mode — full-screen map ===== */
+.nav-active .fab-container {
+  display: none !important;
+}
+.nav-active .leaflet-control-zoom {
+  display: none !important;
+}
+.nav-active .leaflet-control-attribution {
+  display: none !important;
+}
