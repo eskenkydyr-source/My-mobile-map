@@ -56,10 +56,16 @@ export default function RoutePanel() {
         which === 'from' ? setFrom(wp) : setTo(wp)
         setSearchQuery(prev => ({ ...prev, [which]: 'Моё местоположение' }))
       },
-      () => {
-        setLocError('Не удалось получить геолокацию. Разрешите доступ к GPS.')
-        setTimeout(() => setLocError(''), 4000)
-      }
+      (err) => {
+        const msg = err.code === 1
+          ? 'Доступ к GPS запрещён. Разрешите в настройках браузера.'
+          : err.code === 3
+          ? 'GPS не ответил за 15 секунд. Попробуйте на открытом месте.'
+          : 'GPS недоступен. Проверьте настройки местоположения.'
+        setLocError(msg)
+        setTimeout(() => setLocError(''), 5000)
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
     )
   }
 

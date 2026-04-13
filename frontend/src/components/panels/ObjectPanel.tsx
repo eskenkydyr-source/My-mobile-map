@@ -46,45 +46,35 @@ export default function ObjectPanel() {
     setRouting(true)
     setLocError('')
 
-    const tryGPS = () => {
-      if (!navigator.geolocation) { tryIP(); return }
-      navigator.geolocation.getCurrentPosition(
-        pos => applyMyLocation(pos.coords.latitude, pos.coords.longitude),
-        () => tryIP(),
-        { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }
-      )
-    }
-
-    const tryIP = async () => {
-      const services = [
-        async () => {
-          const r = await fetch('https://ipinfo.io/json', { signal: AbortSignal.timeout(5000) })
-          const d = await r.json()
-          if (d.loc) { const [lat, lon] = d.loc.split(',').map(Number); return { lat, lon } }
-          throw new Error('no loc')
-        },
-        async () => {
-          const r = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(5000) })
-          const d = await r.json()
-          if (d.latitude) return { lat: d.latitude, lon: d.longitude }
-          throw new Error('no data')
-        },
-        async () => {
-          const r = await fetch('https://freeipapi.com/api/json', { signal: AbortSignal.timeout(5000) })
-          const d = await r.json()
-          if (d.latitude) return { lat: d.latitude, lon: d.longitude }
-          throw new Error('no data')
-        },
-      ]
-      for (const service of services) {
-        try { const { lat, lon } = await service(); applyMyLocation(lat, lon); return } catch {}
-      }
+    if (!navigator.geolocation) {
       setRouting(false)
-      setLocError('Не удалось определить местоположение. Проверьте интернет.')
-      setTimeout(() => setLocError(''), 4000)
+      setLocError('Геолокация не поддерживается. Откройте в браузере с GPS.')
+      setTimeout(() => setLocError(''), 5000)
+      return
     }
 
-    tryGPS()
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        // Проверяем точность — если >500м, предупреждаем
+        if (pos.coords.accuracy > 500) {
+          setLocError(`Низкая точность GPS (~${Math.round(pos.coords.accuracy)}м). Подождите фиксацию.`)
+          setTimeout(() => setLocError(''), 4000)
+        }
+        applyMyLocation(pos.coords.latitude, pos.coords.longitude)
+      },
+      (err) => {
+        setRouting(false)
+        if (err.code === 1) {
+          setLocError('Доступ к GPS запрещён. Разрешите в настройках браузера.')
+        } else if (err.code === 3) {
+          setLocError('GPS не ответил за 15 секунд. Попробуйте на открытом месте.')
+        } else {
+          setLocError('GPS недоступен. Проверьте настройки местоположения.')
+        }
+        setTimeout(() => setLocError(''), 5000)
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+    )
   }
 
   return (

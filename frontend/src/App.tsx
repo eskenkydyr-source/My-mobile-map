@@ -133,48 +133,29 @@ export default function App() {
     setLocMsg('')
   }
 
-  const locateByIP = async () => {
-    setLocMsg('Определяю по IP...')
-    const services = [
-      async () => {
-        const r = await fetch('https://ipinfo.io/json', { signal: AbortSignal.timeout(5000) })
-        const d = await r.json()
-        if (d.loc) { const [lat, lon] = d.loc.split(',').map(Number); return { lat, lon } }
-        throw new Error('no loc')
-      },
-      async () => {
-        const r = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(5000) })
-        const d = await r.json()
-        if (d.latitude) return { lat: d.latitude, lon: d.longitude }
-        throw new Error('no data')
-      },
-      async () => {
-        const r = await fetch('https://freeipapi.com/api/json', { signal: AbortSignal.timeout(5000) })
-        const d = await r.json()
-        if (d.latitude) return { lat: d.latitude, lon: d.longitude }
-        throw new Error('no data')
-      },
-    ]
-    for (const service of services) {
-      try { const { lat, lon } = await service(); applyLocation(lat, lon); return }
-      catch { /* пробуем следующий */ }
-    }
-    setLocating(false)
-    setLocMsg('Не удалось определить местоположение')
-    setTimeout(() => setLocMsg(''), 3000)
-  }
-
   const goToMyLocation = () => {
     setLocating(true)
     setLocMsg('Определяю местоположение...')
-    if (!navigator.geolocation) { locateByIP(); return }
+    if (!navigator.geolocation) {
+      setLocating(false)
+      setLocMsg('GPS не поддерживается')
+      setTimeout(() => setLocMsg(''), 3000)
+      return
+    }
     navigator.geolocation.getCurrentPosition(
-      (pos) => applyLocation(pos.coords.latitude, pos.coords.longitude),
-      (err) => {
-        setLocMsg(err.code === 1 ? 'GPS запрещён, пробую IP...' : 'GPS недоступен, пробую IP...')
-        locateByIP()
+      (pos) => {
+        if (pos.coords.accuracy > 500) {
+          setLocMsg(`Точность ~${Math.round(pos.coords.accuracy)}м`)
+          setTimeout(() => setLocMsg(''), 3000)
+        }
+        applyLocation(pos.coords.latitude, pos.coords.longitude)
       },
-      { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }
+      (err) => {
+        setLocating(false)
+        setLocMsg(err.code === 1 ? 'GPS запрещён в настройках' : err.code === 3 ? 'GPS не ответил, попробуйте снова' : 'GPS недоступен')
+        setTimeout(() => setLocMsg(''), 4000)
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
     )
   }
 
