@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { MapPin, Radio, X, Map, Ruler, Clock, AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react'
+import { MapPin, Radio, X, Map, Ruler, Clock, AlertCircle, CheckCircle, AlertTriangle, Navigation } from 'lucide-react'
 import { theme as t } from '../../theme'
 import { useStore } from '../../store/useStore'
 import { searchObjects } from '../../utils/search'
 import type { SearchResult } from '../../utils/search'
 
 export default function RoutePanel() {
-  const { from, to, setFrom, setTo, routeSelectMode, setRouteSelectMode, routePath, routeInfo, setRoutePath, setRouteInfo, buildRoute } = useStore()
+  const { from, to, setFrom, setTo, routeSelectMode, setRouteSelectMode, routePath, routeInfo, setRoutePath, setRouteInfo, buildRoute, setNavActive } = useStore()
   const [searchQuery, setSearchQuery] = useState({ from: '', to: '' })
   const [searchResults, setSearchResults] = useState<{ from: SearchResult[]; to: SearchResult[] }>({ from: [], to: [] })
   const [activeSearch, setActiveSearch] = useState<'from' | 'to' | null>(null)
@@ -213,6 +213,22 @@ export default function RoutePanel() {
           <div style={{ fontSize: 13, color: t.text.secondary, display: 'flex', alignItems: 'center', gap: 8 }}>
             <Clock size={13} /> ~{routeInfo.duration.toFixed(0)} мин (30 км/ч)
           </div>
+          {routePath && routePath.length > 0 && (
+            <button
+              onClick={() => setNavActive(true)}
+              aria-label="Начать навигацию"
+              style={{
+                width: '100%', marginTop: 12, padding: '12px',
+                fontSize: 15, fontWeight: 600, minHeight: 48,
+                background: t.successDark, color: t.onColor,
+                border: `1px solid ${t.successBorder}`, borderRadius: 6,
+                cursor: 'pointer', touchAction: 'manipulation',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              }}
+            >
+              <Navigation size={16} /> Начать навигацию
+            </button>
+          )}
         </div>
       )}
 
