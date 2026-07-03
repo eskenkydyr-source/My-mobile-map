@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react'
 import { X, Navigation, CornerUpRight, CornerUpLeft, ArrowUp, RotateCcw, MapPin, Crosshair } from 'lucide-react'
 import { theme as t } from '../theme'
 import { useStore } from '../store/useStore'
@@ -103,9 +102,6 @@ interface Props {
 
 export default function NavigationPanel({ gpsPos, gpsSpeed }: Props) {
   const { routePath, to, setNavActive, rerouting, followGps, setFollowGps, setFlyTarget } = useStore()
-  const watchRef = useRef<number | null>(null)
-
-  useEffect(() => () => { if (watchRef.current) navigator.geolocation.clearWatch(watchRef.current) }, [])
 
   if (!routePath || routePath.length < 2 || !gpsPos) return null
 

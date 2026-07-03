@@ -17,9 +17,12 @@
     "deploy:all": "npm run deploy && npm run deploy:firebase"
   },
   "dependencies": {
+    "@capacitor-community/keep-awake": "^8.0.1",
     "@capacitor/android": "^8.2.0",
+    "@capacitor/app": "^8.1.0",
     "@capacitor/cli": "^8.2.0",
     "@capacitor/core": "^8.2.0",
+    "@capacitor/geolocation": "^8.2.0",
     "@types/leaflet": "^1.9.14",
     "firebase": "^12.11.0",
     "leaflet": "^1.9.4",

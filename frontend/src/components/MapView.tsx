@@ -7,6 +7,7 @@ import { ref, getBytes } from 'firebase/storage'
 import { db, storage } from '../firebase'
 import { useStore } from '../store/useStore'
 import { haversine } from '../utils/distance'
+import { geoAvailable, geoGetCurrentPosition } from '../utils/geo'
 import GraphLayer from './GraphLayer'
 import WellsLayer from './WellsLayer'
 
@@ -87,8 +88,8 @@ function InitialPosition() {
         return
       } catch {}
     }
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
+    if (geoAvailable()) {
+      geoGetCurrentPosition(
         pos => {
           const { latitude: lat, longitude: lng } = pos.coords
           const nearField = Math.abs(lat - 45.374) < 0.5 && Math.abs(lng - 51.926) < 0.5

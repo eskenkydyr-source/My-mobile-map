@@ -4,6 +4,7 @@ import { theme as t } from '../../theme'
 import { useStore } from '../../store/useStore'
 import { searchObjects } from '../../utils/search'
 import type { SearchResult } from '../../utils/search'
+import { geoAvailable, geoGetCurrentPosition } from '../../utils/geo'
 
 export default function RoutePanel() {
   const { from, to, setFrom, setTo, routeSelectMode, setRouteSelectMode, routePath, routeInfo, setRoutePath, setRouteInfo, buildRoute, setNavActive } = useStore()
@@ -45,11 +46,11 @@ export default function RoutePanel() {
 
   const locateMe = (which: 'from' | 'to') => {
     setLocError('')
-    if (!navigator.geolocation) {
+    if (!geoAvailable()) {
       setLocError('Геолокация не поддерживается на этом устройстве')
       return
     }
-    navigator.geolocation.getCurrentPosition(
+    geoGetCurrentPosition(
       pos => {
         const { latitude: lat, longitude: lon } = pos.coords
         const wp = { lat, lon, name: 'Моё местоположение' }

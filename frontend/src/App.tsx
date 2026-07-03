@@ -10,6 +10,9 @@ import OfflineBanner from './components/OfflineBanner'
 import { useStore } from './store/useStore'
 import { haversine, nearestNode } from './utils/distance'
 import { astar, buildAdj } from './utils/astar'
+import { geoAvailable, geoGetCurrentPosition, geoWatchPosition } from './utils/geo'
+import type { GeoWatch } from './utils/geo'
+import { KeepAwake } from '@capacitor-community/keep-awake'
 import './App.css'
 
 /** Порог схода с маршрута (метры) */
@@ -38,7 +41,7 @@ export default function App() {
   const [gpsPos, setGpsPos] = useState<[number, number] | null>(null)
   const [gpsSpeed, setGpsSpeed] = useState<number | null>(null)
   const [gpsHeading, setGpsHeading] = useState<number | null>(null)
-  const watchIdRef = useRef<number | null>(null)
+  const watchIdRef = useRef<GeoWatch | null>(null)
   const rerouteCooldownRef = useRef(false)
 
   // --- Пересчёт маршрута от текущего GPS ---
@@ -69,8 +72,8 @@ export default function App() {
   // --- GPS watchPosition при навигации ---
   useEffect(() => {
     if (navActive) {
-      if (!navigator.geolocation) { setNavActive(false); return }
-      watchIdRef.current = navigator.geolocation.watchPosition(
+      if (!geoAvailable()) { setNavActive(false); return }
+      watchIdRef.current = geoWatchPosition(
         (pos) => {
           const coords: [number, number] = [pos.coords.latitude, pos.coords.longitude]
           setGpsPos(coords)
@@ -87,7 +90,7 @@ export default function App() {
       )
     } else {
       if (watchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.current)
+        watchIdRef.current.clear()
         watchIdRef.current = null
       }
       setGpsPos(null)
@@ -98,11 +101,20 @@ export default function App() {
     }
     return () => {
       if (watchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.current)
+        watchIdRef.current.clear()
         watchIdRef.current = null
       }
     }
   }, [navActive]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // --- Не гасить экран во время навигации ---
+  useEffect(() => {
+    if (navActive) {
+      KeepAwake.keepAwake().catch(() => {}) // не поддерживается — не критично
+    } else {
+      KeepAwake.allowSleep().catch(() => {})
+    }
+  }, [navActive])
 
   // --- Обнаружение схода с маршрута → авто-пересчёт ---
   useEffect(() => {
@@ -138,13 +150,13 @@ export default function App() {
   const goToMyLocation = () => {
     setLocating(true)
     setLocMsg('Определяю местоположение...')
-    if (!navigator.geolocation) {
+    if (!geoAvailable()) {
       setLocating(false)
       setLocMsg('GPS не поддерживается')
       setTimeout(() => setLocMsg(''), 3000)
       return
     }
-    navigator.geolocation.getCurrentPosition(
+    geoGetCurrentPosition(
       (pos) => {
         if (pos.coords.accuracy > 500) {
           setLocMsg(`Точность ~${Math.round(pos.coords.accuracy)}м`)

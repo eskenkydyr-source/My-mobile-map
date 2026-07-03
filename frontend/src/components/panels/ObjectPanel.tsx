@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { MapPin, Crosshair, Flag, Loader, AlertCircle } from 'lucide-react'
 import { theme as t } from '../../theme'
 import { useStore } from '../../store/useStore'
+import { geoAvailable, geoGetCurrentPosition } from '../../utils/geo'
 
 export default function ObjectPanel() {
   const { selectedObject, setFrom, setTo, setActiveTab, setFlyTarget, setMyLocation, buildRoute } = useStore()
@@ -46,14 +47,14 @@ export default function ObjectPanel() {
     setRouting(true)
     setLocError('')
 
-    if (!navigator.geolocation) {
+    if (!geoAvailable()) {
       setRouting(false)
       setLocError('Геолокация не поддерживается. Откройте в браузере с GPS.')
       setTimeout(() => setLocError(''), 5000)
       return
     }
 
-    navigator.geolocation.getCurrentPosition(
+    geoGetCurrentPosition(
       pos => {
         // Проверяем точность — если >500м, предупреждаем
         if (pos.coords.accuracy > 500) {
