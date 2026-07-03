@@ -25,9 +25,15 @@ function FlyTo() {
   const map = useMap()
   const flyTarget = useStore(s => s.flyTarget)
   const setFlyTarget = useStore(s => s.setFlyTarget)
+  const navActive = useStore(s => s.navActive)
   useEffect(() => {
     if (flyTarget) {
-      map.flyTo(flyTarget, 15, { duration: 1 })
+      if (navActive) {
+        // Во время навигации — без анимации, сохраняем текущий зум
+        map.setView(flyTarget, map.getZoom(), { animate: false })
+      } else {
+        map.flyTo(flyTarget, 15, { duration: 1 })
+      }
       setFlyTarget(null)
     }
   }, [flyTarget]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -42,6 +48,31 @@ function PositionSaver() {
       localStorage.setItem('map_pos', JSON.stringify({ lat: c.lat, lon: c.lng, zoom: map.getZoom() }))
     }
   })
+  return null
+}
+
+/** Отключает followGps при ручном перемещении/зуме во время навигации */
+function NavFreeLook() {
+  const map = useMap()
+  const navActive = useStore(s => s.navActive)
+  const setFollowGps = useStore(s => s.setFollowGps)
+
+  useEffect(() => {
+    if (!navActive) return
+    const container = map.getContainer()
+    const handleUserTouch = () => {
+      if (useStore.getState().followGps) {
+        setFollowGps(false)
+      }
+    }
+    container.addEventListener('mousedown', handleUserTouch)
+    container.addEventListener('touchstart', handleUserTouch)
+    return () => {
+      container.removeEventListener('mousedown', handleUserTouch)
+      container.removeEventListener('touchstart', handleUserTouch)
+    }
+  }, [map, navActive, setFollowGps])
+
   return null
 }
 
@@ -401,6 +432,7 @@ export default function MapView() {
       <FlyTo />
       <PositionSaver />
       <InitialPosition />
+      <NavFreeLook />
 
       {/* Дороги + редактор графа (Canvas) */}
       {(layers.roads || editMode) && editGraph && (

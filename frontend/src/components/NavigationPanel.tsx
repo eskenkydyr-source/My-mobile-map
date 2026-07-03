@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { X, Navigation, CornerUpRight, CornerUpLeft, ArrowUp, RotateCcw, MapPin } from 'lucide-react'
+import { X, Navigation, CornerUpRight, CornerUpLeft, ArrowUp, RotateCcw, MapPin, Crosshair } from 'lucide-react'
 import { theme as t } from '../theme'
 import { useStore } from '../store/useStore'
 import { haversine } from '../utils/distance'
@@ -102,7 +102,7 @@ interface Props {
 }
 
 export default function NavigationPanel({ gpsPos, gpsSpeed }: Props) {
-  const { routePath, to, setNavActive, rerouting } = useStore()
+  const { routePath, to, setNavActive, rerouting, followGps, setFollowGps, setFlyTarget } = useStore()
   const watchRef = useRef<number | null>(null)
 
   useEffect(() => () => { if (watchRef.current) navigator.geolocation.clearWatch(watchRef.current) }, [])
@@ -203,6 +203,20 @@ export default function NavigationPanel({ gpsPos, gpsSpeed }: Props) {
           {speedKmh}
         </div>
       </div>
+
+      {/* Кнопка рецентровки — появляется когда пользователь сдвинул карту */}
+      {!followGps && (
+        <button
+          onClick={() => {
+            setFollowGps(true)
+            if (gpsPos) setFlyTarget(gpsPos)
+          }}
+          aria-label="Вернуться к моему местоположению"
+          style={recenterBtnStyle}
+        >
+          <Crosshair size={22} />
+        </button>
+      )}
 
       {/* Нижняя панель — время, прибытие, расстояние, стоп */}
       <div style={bottomBarStyle}>
@@ -350,6 +364,25 @@ const stopBtnFullStyle: React.CSSProperties = {
   alignItems: 'center',
   justifyContent: 'center',
   gap: 8,
+}
+
+const recenterBtnStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: 'calc(80px + env(safe-area-inset-top))',
+  right: 12,
+  width: 48,
+  height: 48,
+  borderRadius: '50%',
+  background: t.accentBlue,
+  color: t.onColor,
+  border: 'none',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'pointer',
+  zIndex: 1001,
+  boxShadow: '0 4px 16px rgba(29,78,216,0.5)',
+  touchAction: 'manipulation',
 }
 
 const destinationStyle: React.CSSProperties = {

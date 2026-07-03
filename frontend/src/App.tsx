@@ -78,7 +78,9 @@ export default function App() {
           setGpsHeading(pos.coords.heading)
           storeSetHeading(pos.coords.heading)
           setMyLocation(coords)
-          setFlyTarget(coords)
+          if (useStore.getState().followGps) {
+            setFlyTarget(coords)
+          }
         },
         () => {},
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 2000 }

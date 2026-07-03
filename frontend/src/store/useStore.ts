@@ -86,6 +86,8 @@ interface Store {
   setGpsHeading: (h: number | null) => void
   rerouting: boolean
   setRerouting: (v: boolean) => void
+  followGps: boolean
+  setFollowGps: (v: boolean) => void
 
   // Построение маршрута A*
   buildRoute: () => void
@@ -183,11 +185,13 @@ export const useStore = create<Store>((set, _get) => ({
   setActiveTab: (t) => set({ activeTab: t }),
 
   navActive: false,
-  setNavActive: (v) => set({ navActive: v }),
+  setNavActive: (v) => set({ navActive: v, followGps: v }),
   gpsHeading: null,
   setGpsHeading: (h) => set({ gpsHeading: h }),
   rerouting: false,
   setRerouting: (v) => set({ rerouting: v }),
+  followGps: true,
+  setFollowGps: (v) => set({ followGps: v }),
 
   buildRoute: () => {
     const { from, to, editGraph } = _get()
