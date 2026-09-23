@@ -10,6 +10,7 @@ import OfflineBanner from './components/OfflineBanner'
 import { useStore } from './store/useStore'
 import { haversine, nearestNode } from './utils/distance'
 import { astar, buildAdj } from './utils/astar'
+import { locateOnRoute } from './utils/routeProgress'
 import { geoAvailable, geoGetCurrentPosition, geoWatchPosition } from './utils/geo'
 import type { GeoWatch } from './utils/geo'
 import { KeepAwake } from '@capacitor-community/keep-awake'
@@ -121,14 +122,9 @@ export default function App() {
     if (!navActive || !gpsPos || !routePath || routePath.length < 2) return
     if (rerouteCooldownRef.current) return
 
-    // Расстояние до ближайшей точки маршрута
-    let minDist = Infinity
-    for (const pt of routePath) {
-      const d = haversine(gpsPos[0], gpsPos[1], pt[0], pt[1])
-      if (d < minDist) minDist = d
-    }
-
-    if (minDist > OFF_ROUTE_THRESHOLD) {
+    // Расстояние до линии маршрута, а не до его вершин: вершины стоят через сотни метров,
+    // и посреди отрезка машина «сходила с маршрута» — пересчёт каждые 5 с уводил на соседние дороги
+    if (locateOnRoute(gpsPos, routePath).offRoute > OFF_ROUTE_THRESHOLD) {
       // Сошли с маршрута — пересчитываем
       rerouteCooldownRef.current = true
       setRerouting(true)

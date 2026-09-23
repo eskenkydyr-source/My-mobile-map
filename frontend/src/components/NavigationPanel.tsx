@@ -1,65 +1,11 @@
-import { X, Navigation, CornerUpRight, CornerUpLeft, ArrowUp, RotateCcw, MapPin, Crosshair } from 'lucide-react'
+import { useEffect } from 'react'
+import { X, Navigation, CornerUpRight, CornerUpLeft, ArrowUp, RotateCcw, MapPin, Crosshair, Volume2, VolumeX } from 'lucide-react'
 import { theme as t } from '../theme'
 import { useStore } from '../store/useStore'
-import { haversine } from '../utils/distance'
-
-// Рассчитать азимут от точки A к точке B (в градусах 0-360)
-function bearing(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const φ1 = lat1 * Math.PI / 180
-  const φ2 = lat2 * Math.PI / 180
-  const Δλ = (lon2 - lon1) * Math.PI / 180
-  const y = Math.sin(Δλ) * Math.cos(φ2)
-  const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ)
-  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360
-}
-
-// Найти ближайшую точку маршрута к текущей позиции
-function findProgress(pos: [number, number], path: [number, number][]): number {
-  let best = 0
-  let bestDist = Infinity
-  for (let i = 0; i < path.length; i++) {
-    const d = haversine(pos[0], pos[1], path[i][0], path[i][1])
-    if (d < bestDist) { bestDist = d; best = i }
-  }
-  return best
-}
-
-// Оставшееся расстояние от текущего индекса до конца маршрута
-function remainingDist(fromIdx: number, path: [number, number][]): number {
-  let dist = 0
-  for (let i = fromIdx; i < path.length - 1; i++) {
-    dist += haversine(path[i][0], path[i][1], path[i + 1][0], path[i + 1][1])
-  }
-  return dist
-}
-
-// Найти следующий поворот на маршруте
-// Возвращает: угол поворота (0-360, 0=прямо), расстояние до поворота, индекс
-function findNextTurn(fromIdx: number, path: [number, number][]): { angle: number; dist: number; idx: number } | null {
-  const TURN_THRESHOLD = 30 // градусов — считаем поворотом
-  let accumulated = 0
-
-  for (let i = fromIdx; i < path.length - 2; i++) {
-    accumulated += haversine(path[i][0], path[i][1], path[i + 1][0], path[i + 1][1])
-
-    const brg1 = bearing(path[i][0], path[i][1], path[i + 1][0], path[i + 1][1])
-    const brg2 = bearing(path[i + 1][0], path[i + 1][1], path[i + 2][0], path[i + 2][1])
-    let diff = brg2 - brg1
-    if (diff > 180) diff -= 360
-    if (diff < -180) diff += 360
-
-    if (Math.abs(diff) > TURN_THRESHOLD) {
-      return { angle: diff, dist: accumulated, idx: i + 1 }
-    }
-  }
-  return null
-}
-
-// Следующий маневр после текущего поворота
-function findTurnAfter(turnIdx: number, path: [number, number][]): { angle: number; dist: number } | null {
-  const result = findNextTurn(turnIdx + 1, path)
-  return result ? { angle: result.angle, dist: result.dist } : null
-}
+import { locateOnRoute, remainingFrom, nextTurn as findNextTurn, turnAfter as findTurnAfter } from '../utils/routeProgress'
+import type { LatLon } from '../utils/routeProgress'
+import { turnKind, turnKey } from '../utils/navVoice'
+import { speak, speechSupported, stopSpeaking, updateVoiceGuidance } from '../utils/speech'
 
 interface TurnInfo {
   icon: React.ReactNode
@@ -67,16 +13,18 @@ interface TurnInfo {
   color: string
 }
 
+// Границы поворотов общие с голосом (turnKind) — значок и фраза всегда совпадают
 function getTurnInfo(angle: number): TurnInfo {
-  const abs = Math.abs(angle)
-  if (abs <= 30) return { icon: <ArrowUp size={32} />, text: 'Прямо', color: t.accent }
-  if (angle > 30 && angle <= 70) return { icon: <CornerUpRight size={32} />, text: 'Правее', color: t.accent }
-  if (angle > 70 && angle <= 120) return { icon: <CornerUpRight size={32} />, text: 'Направо', color: t.warning }
-  if (angle > 120) return { icon: <RotateCcw size={32} style={{ transform: 'scaleX(-1)' }} />, text: 'Разворот', color: t.error }
-  if (angle < -30 && angle >= -70) return { icon: <CornerUpLeft size={32} />, text: 'Левее', color: t.accent }
-  if (angle < -70 && angle >= -120) return { icon: <CornerUpLeft size={32} />, text: 'Налево', color: t.warning }
-  if (angle < -120) return { icon: <RotateCcw size={32} />, text: 'Разворот', color: t.error }
-  return { icon: <ArrowUp size={32} />, text: 'Прямо', color: t.accent }
+  switch (turnKind(angle)) {
+    case 'slight-right': return { icon: <CornerUpRight size={32} />, text: 'Правее', color: t.accent }
+    case 'right': return { icon: <CornerUpRight size={32} />, text: 'Направо', color: t.warning }
+    case 'slight-left': return { icon: <CornerUpLeft size={32} />, text: 'Левее', color: t.accent }
+    case 'left': return { icon: <CornerUpLeft size={32} />, text: 'Налево', color: t.warning }
+    case 'uturn': return angle > 0
+      ? { icon: <RotateCcw size={32} style={{ transform: 'scaleX(-1)' }} />, text: 'Разворот', color: t.error }
+      : { icon: <RotateCcw size={32} />, text: 'Разворот', color: t.error }
+    default: return { icon: <ArrowUp size={32} />, text: 'Прямо', color: t.accent }
+  }
 }
 
 function getSmallTurnIcon(angle: number): React.ReactNode {
@@ -101,12 +49,16 @@ interface Props {
 }
 
 export default function NavigationPanel({ gpsPos, gpsSpeed }: Props) {
-  const { routePath, to, setNavActive, rerouting, followGps, setFollowGps, setFlyTarget } = useStore()
-
+  const routePath = useStore(s => s.routePath)
   if (!routePath || routePath.length < 2 || !gpsPos) return null
+  return <NavigationView gpsPos={gpsPos} gpsSpeed={gpsSpeed} routePath={routePath} />
+}
 
-  const progressIdx = findProgress(gpsPos, routePath)
-  const remaining = remainingDist(progressIdx, routePath)
+function NavigationView({ gpsPos, gpsSpeed, routePath }: { gpsPos: LatLon; gpsSpeed: number | null; routePath: LatLon[] }) {
+  const { to, setNavActive, rerouting, followGps, setFollowGps, setFlyTarget, voiceEnabled, setVoiceEnabled } = useStore()
+
+  const progress = locateOnRoute(gpsPos, routePath)
+  const remaining = remainingFrom(progress, routePath)
   const isArrived = remaining < 30
 
   const speedKmh = gpsSpeed !== null && gpsSpeed > 0.5 ? Math.round(gpsSpeed * 3.6) : 0
@@ -119,12 +71,29 @@ export default function NavigationPanel({ gpsPos, gpsSpeed }: Props) {
   })() : null
 
   // Поворот
-  const nextTurn = findNextTurn(progressIdx, routePath)
+  const nextTurn = findNextTurn(progress, routePath)
   const turnInfo = nextTurn ? getTurnInfo(nextTurn.angle) : { icon: <ArrowUp size={32} />, text: 'Прямо', color: t.accent }
   const distToTurn = nextTurn ? nextTurn.dist : remaining
 
   // Следующий маневр после поворота
-  const turnAfter = nextTurn ? findTurnAfter(nextTurn.idx, routePath) : null
+  const turnAfter = nextTurn ? findTurnAfter(nextTurn, routePath) : null
+
+  // Голосовые подсказки: фраза звучит, когда машина въезжает в зону 1 км / 500 / 200 / 30 м
+  const turnId = nextTurn ? turnKey(routePath[nextTurn.idx]) : null
+  const turnAngle = nextTurn?.angle ?? null
+  const turnDist = nextTurn?.dist ?? null
+  const afterAngle = turnAfter?.angle ?? null
+  const afterDist = turnAfter?.dist ?? null
+  useEffect(() => {
+    if (!voiceEnabled) return
+    updateVoiceGuidance({
+      turn: turnId !== null && turnAngle !== null && turnDist !== null
+        ? { key: turnId, angle: turnAngle, dist: turnDist, afterAngle, afterDist }
+        : null,
+      remaining,
+      arrived: isArrived,
+    })
+  }, [voiceEnabled, turnId, turnAngle, turnDist, afterAngle, afterDist, remaining, isArrived])
 
   // Прибыли
   if (isArrived) {
@@ -243,6 +212,21 @@ export default function NavigationPanel({ gpsPos, gpsSpeed }: Props) {
 
         <div style={bottomDivider} />
 
+        {speechSupported() && (
+          <button
+            onClick={() => {
+              if (voiceEnabled) stopSpeaking()
+              else speak('Звук включён') // нажатие заодно разрешает звук в Safari
+              setVoiceEnabled(!voiceEnabled)
+            }}
+            aria-label="Голосовые подсказки"
+            aria-pressed={voiceEnabled}
+            style={{ ...soundBtnStyle, color: voiceEnabled ? t.text.primary : t.text.muted }}
+          >
+            {voiceEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+          </button>
+        )}
+
         <button onClick={() => setNavActive(false)} aria-label="Остановить навигацию" style={stopBtnStyle}>
           <X size={20} />
         </button>
@@ -327,6 +311,21 @@ const bottomDivider: React.CSSProperties = {
   height: 32,
   background: t.border.default,
   flexShrink: 0,
+}
+
+const soundBtnStyle: React.CSSProperties = {
+  width: 44,
+  height: 44,
+  borderRadius: '50%',
+  background: t.bg.surface,
+  border: `1px solid ${t.border.default}`,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'pointer',
+  touchAction: 'manipulation',
+  flexShrink: 0,
+  marginLeft: 8,
 }
 
 const stopBtnStyle: React.CSSProperties = {

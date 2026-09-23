@@ -10,6 +10,7 @@
     "build:firebase": "cross-env FIREBASE=true tsc -b && cross-env FIREBASE=true vite build",
     "build:mobile": "CAPACITOR=true tsc -b && CAPACITOR=true vite build && npx cap sync android",
     "lint": "eslint .",
+    "test": "node --test \"tests/*.test.ts\"",
     "preview": "vite preview",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",

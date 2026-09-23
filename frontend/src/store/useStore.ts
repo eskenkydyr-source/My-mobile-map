@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { idbGet, idbSet, idbDel } from '../utils/idb'
 import { haversine, nearestNode } from '../utils/distance'
 import { astar, buildAdj } from '../utils/astar'
+import { startVoiceGuidance, stopSpeaking } from '../utils/speech'
 
 export type WellType = 'dob.' | 'nagn.' | 'likv.' | 'water' | 'gaz' | 'kontr.' | 'razv.'
 
@@ -88,12 +89,24 @@ interface Store {
   setRerouting: (v: boolean) => void
   followGps: boolean
   setFollowGps: (v: boolean) => void
+  voiceEnabled: boolean             // голосовые подсказки, выбор запоминается
+  setVoiceEnabled: (v: boolean) => void
 
   // Построение маршрута A*
   buildRoute: () => void
 }
 
 let markerCounter = 0
+
+const VOICE_KEY = 'kalamkas_voice'
+
+function loadVoiceEnabled(): boolean {
+  try {
+    return localStorage.getItem(VOICE_KEY) !== 'off'
+  } catch {
+    return true
+  }
+}
 
 export const useStore = create<Store>((set, _get) => ({
   // Данные карты
@@ -185,13 +198,27 @@ export const useStore = create<Store>((set, _get) => ({
   setActiveTab: (t) => set({ activeTab: t }),
 
   navActive: false,
-  setNavActive: (v) => set({ navActive: v, followGps: v }),
+  setNavActive: (v) => {
+    // Старт вызывается из нажатия кнопки — только в этот момент браузер разрешает включить звук
+    if (v) startVoiceGuidance(_get().voiceEnabled)
+    else stopSpeaking()
+    set({ navActive: v, followGps: v })
+  },
   gpsHeading: null,
   setGpsHeading: (h) => set({ gpsHeading: h }),
   rerouting: false,
   setRerouting: (v) => set({ rerouting: v }),
   followGps: true,
   setFollowGps: (v) => set({ followGps: v }),
+  voiceEnabled: loadVoiceEnabled(),
+  setVoiceEnabled: (v) => {
+    try {
+      localStorage.setItem(VOICE_KEY, v ? 'on' : 'off')
+    } catch {
+      // приватный режим браузера — выбор просто не запомнится
+    }
+    set({ voiceEnabled: v })
+  },
 
   buildRoute: () => {
     const { from, to, editGraph } = _get()
