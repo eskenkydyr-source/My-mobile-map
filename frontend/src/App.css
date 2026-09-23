@@ -71,6 +71,11 @@ button:active {
     font-size: 20px !important;
   }
 
+  /* Search bar spans the width here — put zoom below it (bar is 46px tall) */
+  .leaflet-top.leaflet-left {
+    top: calc(max(12px, env(safe-area-inset-top)) + 48px);
+  }
+
   /* Move zoom control left to not overlap FABs */
   .leaflet-right .leaflet-control {
     margin-right: 8px;
