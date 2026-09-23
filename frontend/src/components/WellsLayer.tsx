@@ -102,7 +102,9 @@ export default function WellsLayer({ wells, activeWellTypes, onWellClick }: Well
     const maxLon = bounds.getEast() + BUFFER
 
     const isMobile = window.innerWidth <= 768
-    const radius = isMobile ? 8 : 3
+    const radius = isMobile ? 4 : 3
+    // Зона нажатия на телефоне остаётся прежней, хотя точка рисуется меньше
+    const hitRadius = isMobile ? 8 : 3
     const visWells: { idx: number; x: number; y: number; r: number; lat: number; lon: number }[] = []
 
     // Группируем по цвету для оптимизации (меньше смен стиля)
@@ -134,7 +136,7 @@ export default function WellsLayer({ wells, activeWellTypes, onWellClick }: Well
         ctx.arc(x, y, radius, 0, Math.PI * 2)
         ctx.fill()
         ctx.stroke()
-        visWells.push({ idx, x: x * dpr, y: y * dpr, r: radius * dpr, lat, lon })
+        visWells.push({ idx, x: x * dpr, y: y * dpr, r: hitRadius * dpr, lat, lon })
       }
     }
 
