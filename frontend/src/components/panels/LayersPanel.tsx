@@ -700,7 +700,7 @@ export default function LayersPanel() {
 
       {/* Базовая карта */}
       <div>
-        <div style={{ fontSize: 11, color: t.text.dim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
+        <div style={{ fontSize: 12, color: t.text.dim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
           Подложка
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
@@ -724,7 +724,7 @@ export default function LayersPanel() {
 
       {/* Объектные слои */}
       <div>
-        <div style={{ fontSize: 11, color: t.text.dim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
+        <div style={{ fontSize: 12, color: t.text.dim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
           Слои
         </div>
         {[
@@ -745,7 +745,7 @@ export default function LayersPanel() {
       {/* Типы скважин */}
       {layers.wells && (
         <div>
-          <div style={{ fontSize: 11, color: t.text.dim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
+          <div style={{ fontSize: 12, color: t.text.dim, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
             Типы скважин
           </div>
           {WELL_TYPES.map(({ key, label, color, count }) => (
@@ -754,7 +754,7 @@ export default function LayersPanel() {
                 style={{ width: 18, height: 18 }} />
               <span style={{ width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0 }} />
               <span style={{ flex: 1 }}>{label}</span>
-              <span style={{ fontSize: 11, color: t.text.dim }}>{count}</span>
+              <span style={{ fontSize: 12, color: t.text.dim }}>{count}</span>
             </label>
           ))}
         </div>

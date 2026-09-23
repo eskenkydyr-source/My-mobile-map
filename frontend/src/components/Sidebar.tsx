@@ -27,7 +27,7 @@ export default function Sidebar() {
         <h1 style={{ fontSize: 18, fontWeight: 700, color: t.accent, letterSpacing: 1, margin: 0 }}>
           ҚАЛАМҚАС
         </h1>
-        <p style={{ fontSize: 11, color: t.text.dim, margin: '4px 0 0' }}>
+        <p style={{ fontSize: 12, color: t.text.dim, margin: '4px 0 0' }}>
           Карта нефтяного месторождения
         </p>
       </div>
