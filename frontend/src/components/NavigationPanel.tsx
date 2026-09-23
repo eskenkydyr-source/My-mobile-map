@@ -1,11 +1,13 @@
 import { useEffect } from 'react'
-import { X, Navigation, CornerUpRight, CornerUpLeft, ArrowUp, RotateCcw, MapPin, Crosshair, Volume2, VolumeX } from 'lucide-react'
+import { X, Navigation, CornerUpRight, CornerUpLeft, ArrowUp, RotateCcw, MapPin, Crosshair, Volume2, VolumeX, AlertTriangle, LocateFixed } from 'lucide-react'
 import { theme as t } from '../theme'
 import { useStore } from '../store/useStore'
 import { locateOnRoute, remainingFrom, nextTurn as findNextTurn, turnAfter as findTurnAfter } from '../utils/routeProgress'
 import type { LatLon } from '../utils/routeProgress'
 import { turnKind, turnKey } from '../utils/navVoice'
 import { speak, speechSupported, stopSpeaking, updateVoiceGuidance } from '../utils/speech'
+import { navWaitStatus } from '../utils/navStatus'
+import type { NavWaitStatus } from '../utils/navStatus'
 
 interface TurnInfo {
   icon: React.ReactNode
@@ -46,12 +48,46 @@ interface Props {
   gpsPos: [number, number] | null
   gpsSpeed: number | null
   gpsHeading: number | null
+  gpsError: number | null
 }
 
-export default function NavigationPanel({ gpsPos, gpsSpeed }: Props) {
+export default function NavigationPanel({ gpsPos, gpsSpeed, gpsError }: Props) {
   const routePath = useStore(s => s.routePath)
-  if (!routePath || routePath.length < 2 || !gpsPos) return null
+  if (!routePath || routePath.length < 2 || !gpsPos) {
+    return <NavigationWaiting status={navWaitStatus(!!routePath && routePath.length >= 2, gpsError)} />
+  }
   return <NavigationView gpsPos={gpsPos} gpsSpeed={gpsSpeed} routePath={routePath} />
+}
+
+// Вести пока некуда (нет точки GPS или маршрута): объясняем почему и даём выйти
+function NavigationWaiting({ status }: { status: NavWaitStatus }) {
+  const setNavActive = useStore(s => s.setNavActive)
+  return (
+    <>
+      <div style={topCardStyle}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            ...turnIconBox,
+            background: status.problem ? t.errorBg : t.bg.elevated,
+            color: status.problem ? t.errorText : t.accent,
+          }}>
+            {status.problem
+              ? <AlertTriangle size={28} />
+              : <LocateFixed size={28} style={{ animation: 'pulse 1.5s infinite' }} />}
+          </div>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: t.text.primary }}>{status.title}</div>
+            <div style={{ fontSize: 13, color: t.text.secondary, marginTop: 2 }}>{status.hint}</div>
+          </div>
+        </div>
+      </div>
+      <div style={bottomBarStyle}>
+        <button onClick={() => setNavActive(false)} aria-label="Завершить навигацию" style={stopBtnFullStyle}>
+          <X size={18} /> Завершить
+        </button>
+      </div>
+    </>
+  )
 }
 
 function NavigationView({ gpsPos, gpsSpeed, routePath }: { gpsPos: LatLon; gpsSpeed: number | null; routePath: LatLon[] }) {

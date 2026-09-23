@@ -42,6 +42,7 @@ export default function App() {
   const [gpsPos, setGpsPos] = useState<[number, number] | null>(null)
   const [gpsSpeed, setGpsSpeed] = useState<number | null>(null)
   const [gpsHeading, setGpsHeading] = useState<number | null>(null)
+  const [gpsError, setGpsError] = useState<number | null>(null) // код ошибки геолокации в навигации
   const watchIdRef = useRef<GeoWatch | null>(null)
   const rerouteCooldownRef = useRef(false)
 
@@ -78,6 +79,7 @@ export default function App() {
         (pos) => {
           const coords: [number, number] = [pos.coords.latitude, pos.coords.longitude]
           setGpsPos(coords)
+          setGpsError(null)
           setGpsSpeed(pos.coords.speed)
           setGpsHeading(pos.coords.heading)
           storeSetHeading(pos.coords.heading)
@@ -86,7 +88,8 @@ export default function App() {
             setFlyTarget(coords)
           }
         },
-        () => {},
+        // Показываем водителю на экране навигации, иначе он видит пустую карту без кнопок
+        (err) => setGpsError(err.code),
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 2000 }
       )
     } else {
@@ -95,6 +98,7 @@ export default function App() {
         watchIdRef.current = null
       }
       setGpsPos(null)
+      setGpsError(null)
       setGpsSpeed(null)
       setGpsHeading(null)
       storeSetHeading(null)
@@ -184,7 +188,7 @@ export default function App() {
         <MapView />
         {!navActive && <SearchBar />}
         {navActive && (
-          <NavigationPanel gpsPos={gpsPos} gpsSpeed={gpsSpeed} gpsHeading={gpsHeading} />
+          <NavigationPanel gpsPos={gpsPos} gpsSpeed={gpsSpeed} gpsHeading={gpsHeading} gpsError={gpsError} />
         )}
       </div>
 
