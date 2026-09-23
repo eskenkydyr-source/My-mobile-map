@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { MapPin, Radio, X, Map, Ruler, Clock, AlertCircle, CheckCircle, AlertTriangle, Navigation } from 'lucide-react'
 import { theme as t } from '../../theme'
 import { useStore } from '../../store/useStore'
@@ -12,6 +12,13 @@ export default function RoutePanel() {
   const [searchResults, setSearchResults] = useState<{ from: SearchResult[]; to: SearchResult[] }>({ from: [], to: [] })
   const [activeSearch, setActiveSearch] = useState<'from' | 'to' | null>(null)
   const [locError, setLocError] = useState('')
+  const navBtnRef = useRef<HTMLButtonElement>(null)
+
+  // После построения маршрута кнопка навигации — следующий шаг: прокручиваем к ней,
+  // иначе на телефоне она уходит под нижний край панели
+  useEffect(() => {
+    if (routeInfo) navBtnRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [routeInfo])
 
   const wells = useStore(s => s.wells)
   const bkns  = useStore(s => s.bkns)
@@ -178,9 +185,10 @@ export default function RoutePanel() {
           onClick={buildRoute}
           style={{
             flex: 1, padding: '12px', fontSize: 15, fontWeight: 600, minHeight: 48,
-            background: from && to ? t.accentBlue : t.bg.surface,
-            color: from && to ? t.onColor : t.text.dim,
-            border: 'none', borderRadius: 6,
+            // Когда маршрут построен, главная кнопка — «Начать навигацию», эта становится второстепенной
+            background: from && to && !routeInfo ? t.accentBlue : t.bg.surface,
+            color: from && to ? (routeInfo ? t.text.secondary : t.onColor) : t.text.dim,
+            border: routeInfo ? `1px solid ${t.border.default}` : 'none', borderRadius: 6,
             cursor: from && to ? 'pointer' : 'default',
             touchAction: 'manipulation',
           }}
@@ -216,6 +224,7 @@ export default function RoutePanel() {
           </div>
           {routePath && routePath.length > 0 && (
             <button
+              ref={navBtnRef}
               onClick={() => setNavActive(true)}
               aria-label="Начать навигацию"
               style={{
