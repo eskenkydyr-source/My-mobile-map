@@ -14,8 +14,8 @@
   --color-border-subtle: #1e293b;
   --color-text-primary: #f1f5f9;
   --color-text-secondary: #94a3b8;
-  --color-text-muted: #64748b;
-  --color-text-dim: #475569;
+  --color-text-muted: #8a99ae;   /* 6.2:1 на bg-base, 5.1:1 на bg-surface (WCAG AA) */
+  --color-text-dim: #8190a5;     /* 5.5:1 на bg-base, 4.5:1 на bg-surface (WCAG AA) */
   --color-accent: #38bdf8;
   --color-accent-blue: #1d4ed8;
   --color-success: #22c55e;
